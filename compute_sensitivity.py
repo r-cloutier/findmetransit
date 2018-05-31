@@ -253,7 +253,7 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
     # is the planet detected?
     detected = True if np.any(np.isclose(params[:,0], Ps[0], atol=Ps[0]*.02)) else False
     sens.add_detected(np.array([detected]).astype(int))
-    ##save_fits(np.array([detected]).astype(int), 'Results/%s/is_detected'%fname_short)
+    #save_fits(np.array([detected]).astype(int), 'Results/%s/is_detected'%fname_short)
 
 
 
