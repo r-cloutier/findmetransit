@@ -334,9 +334,9 @@ if __name__ == '__main__':
     #plt.hist(Tmag_fullsky, bins=1000, log=True, histtype='step', cumulative=True), plt.axhline(1e4), plt.show()
     g = (Tmag < 11.1) & (Teff<4e3)
     Tmag, Teff, Rs, Ms = Tmag[g], Teff[g], Rs[g], Ms[g]
-    Nplanets_per_star = 30
+    Nplanets_per_star = 20
     for i in range(Nplanets_per_star):
-	fname = 'TOIsensitivity11d1_%.5d_%.3d'%(fnum,i)
+	fname = 'TOIsensitivity351_%.5d_%.3d'%(fnum,i)
 	g = np.random.randint(0,Tmag.size)
 	rpRs = rvs.Rearth2m(rp) / rvs.Rsun2m(Rs[g])
 	compute_sensitivity(fname, [P], [rpRs], Tmag[g], Rs[g], Ms[g], Teff[g])
