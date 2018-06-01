@@ -348,7 +348,7 @@ def identify_EBs(params, bjd, fcorr, ef, SNRthresh=3.):
     notEB = np.ones(Nplanets)
     for i in range(Nplanets):
 	# check for significant eclipse depths at two times in case T0 is near an edge of the WF
-	P, T0, depth, duration = params
+	P, T0, depth, duration = params[i]
 	eclipse1 = (bjd >= T0+.5*P-.5*duration) & (bjd <= T0+.5*P+.5*duration)
 	eclipse2 = (bjd >= T0-.5*P-.5*duration) & (bjd <= T0-.5*P+.5*duration)	
 	outeclipse1 = (bjd >= T0+.5*P-2*duration) & (bjd <= T0+.5*P-duration)
