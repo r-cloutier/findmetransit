@@ -18,11 +18,17 @@ def scale_rms(mag):
     return rms0 * np.sqrt(flux_ratio)
 
 
-def get_timeseries(mag, Teff, Rs, Ps, rpRss, add_systematic=True):
+def get_timeseries(mag, Teff, Rs, Ps, rpRss, add_systematic=True,
+		   N_to_extend_baseline=0):
     # get WF
     fname = 'tess2019128220341-0000000005712108-0016-s_lc.fits'
     hdu = download_one_fits(fname)
-    hdr, bjd,_,_ = get_lc(hdu)
+    hdr, bjdorig,_,_ = get_lc(hdu)
+    # extend to longer baselines (i.e. more than 27 days)
+    dt = np.median(np.diff(bjdorig))
+    bjd = bjdorig + 0
+    for i in range(int(N_to_extend_baseline)):
+    	bjd = np.append(bjd, bjdorig+(bjd.max()-bjdorig.min())+dt)    
 
     # get uncertainties
     rms = scale_rms(mag)
@@ -252,10 +258,11 @@ def MAD(lnLs):
 
 
 def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
-			add_systematic=True):
+			add_systematic=True, N_to_extend_baseline=0):
     # create timeseries and save
     hdr, bjd, f, ef, fcorr, params = get_timeseries(Tmag, Teff, Rs, Ps, rpRss,
-					            add_systematic)
+					            add_systematic, 
+						    N_to_extend_baseline)
 
     # save true parameters for cross-checking
     fname_short = fname.replace('.fits','')
@@ -367,4 +374,5 @@ if __name__ == '__main__':
 	fname = 'TOIsensitivity351_%.5d_%.3d'%(fnum,i)
 	g = np.random.randint(0,Tmag.size)
 	rpRs = rvs.Rearth2m(rp) / rvs.Rsun2m(Rs[g])
-	compute_sensitivity(fname, [P], [rpRs], Tmag[g], Rs[g], Ms[g], Teff[g])
+	compute_sensitivity(fname, [P], [rpRs], Tmag[g], Rs[g], Ms[g], Teff[g],
+			    N_to_extend_baseline=np.ceil(P/27.)-1)
