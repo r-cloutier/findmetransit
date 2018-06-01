@@ -1,7 +1,7 @@
 from TESS_search import *
 import matplotlib.gridspec as gridspec
 import linear_lnlike as llnl
-import batman
+import batman, ellc
 from truncate_cmap import *
 from sensitivity_class import *
 
@@ -31,6 +31,10 @@ def get_timeseries(mag, Teff, Rs, Ps, rpRss, add_systematic=True):
     # add planet models
     params, fmodel = get_planet_model(bjd, Ps, rpRss, Rs)
     fcorr = fmodel + np.random.randn(bjd.size) * rms
+
+    # add eclipsing binaries (sometimes)
+    ebmodel = get_EB_model(bjd, Rs)
+    fcorr += ebmodel
 
     # add trends if desired
     if add_systematic:
@@ -91,6 +95,30 @@ def batman_transit_model(theta, bjd):
     phase = (bjd-T0) / P
     m = batman.TransitModel(params, phase)
     return m.light_curve(params)
+
+
+def get_EB_model(bjd, Rs):
+    inc = np.rad2deg(np.arccos(np.random.uniform(-1,1)))
+    # sample Kepler EB periods
+    Ps, Teffs = np.loadtxt('EBs/Kepler_EBC_v3.dat', delimiter=',', usecols=(1,9)).T
+    g, P = (Teff<=4e3) & (Teff>0), 0
+    while P <= 0:
+    	P = np.random.choice(Ps) * np.random.normal(1,.1)
+    R2 = np.random.uniform(.08, Rs)  # radius of the stellar companion
+    b = rvs.impactparam_inc(P, Rs, Rs, inc, mp_Mearth=rvs.kg2Mearth(rvs.Msun2kg(R2)))
+    if abs(b) > 1:   # no eclipse
+	return np.zeros(bjd.size)
+    else:   # eclipse -> compute the LC model
+    	T0 = np.random.uniform(bjd.min(), bjd.max())
+    	a = rvs.AU2m(rvs.semimajoraxis(P, Rs, rvs.kg2Mearth(rvs.Msun2kg(R2))))
+	r1, r2 = rvs.Rsun2m(Rs)/a, rvs.Rsun2m(R2)/a
+	assert r1 < 1
+	assert r2 < 1
+	sbratio = (R2/Rs)**3
+    	return ellc.lc(bjd, r1, r2, sbratio, inc, t_zero=T0, period=P, q=R2/Rs, 
+		       ld_1='quad', ldc_1=[-0.0023, 0.1513], 
+		       ld_2='quad', ldc_2=[-0.0023, 0.1513])
+
 
 
 def create_summary_image(fname_short, planetcols=['b','g','r','k','c'],
@@ -253,11 +281,11 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
     # is the planet detected?
     detected = True if np.any(np.isclose(params[:,0], Ps[0], atol=Ps[0]*.02)) else False
     sens.add_detected(np.array([detected]).astype(int))
-    #save_fits(np.array([detected]).astype(int), 'Results/%s/is_detected'%fname_short)
+    ##save_fits(np.array([detected]).astype(int), 'Results/%s/is_detected'%fname_short)
 
 
 
-def get_completeness_grid(prefix='TOIsensitivity', pltt=True):
+def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
     '''Get the completeness as a function of P & rp/Rs for a set of sensitivity
     calculations'''
     # get folders
