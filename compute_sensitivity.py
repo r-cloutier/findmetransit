@@ -288,7 +288,7 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
 
     # search for transits in the corrected LC and get the transit parameters guesses
     print 'Searching for transit-like events...\n'
-    params = find_transits(sens, bjd, f, ef, resultsGP[0], hdr, fname_short)
+    params, EBparams = find_transits(sens, bjd, f, ef, resultsGP[0], hdr, fname_short)
     sens.add_params_guess(params)
     ##save_fits(params, 'Results/%s/params_guess'%fname_short)
 
