@@ -123,7 +123,7 @@ def get_EB_model(bjd, Rs):
 	sbratio = (R2/Rs)**3
     	return ellc.lc(bjd, r1, r2, sbratio, inc, t_zero=T0, period=P, q=R2/Rs, 
 		       ld_1='quad', ldc_1=[-0.0023, 0.1513], 
-		       ld_2='quad', ldc_2=[-0.0023, 0.1513])
+		       ld_2='quad', ldc_2=[-0.0023, 0.1513]) - 1
 
 
 

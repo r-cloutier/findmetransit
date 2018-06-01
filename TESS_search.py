@@ -77,8 +77,9 @@ def do_mcmc_0(sens, bjd, f, ef, fname, Nmcmc_pnts=2e2,
     ##save_fits(thetaGP, 'Results/%s/GP_theta'%fname)
     initialize = np.array([.1,.1,.01,.1,thetaGP[4]*.1])
     assert 0 not in initialize
-    #tbin, fbin, efbin = boxcar(bjd,f,ef,dt=(bjd.max()-bjd.min())/Nmcmc_pnts)
-    tbin, fbin, efbin = boxcar(bjd,f,ef,dt=np.exp(thetaGP[3])/4.)
+    Prot = np.exp(thetaGP[3])
+    dt = (bjd.max()-bjd.min())/Nmcmc_pnts if Prot/4.>(bjd.max()-bjd.min())/1e2 else Prot/4.
+    tbin, fbin, efbin = boxcar(bjd,f,ef,dt=dt)
     sampler, samples = mcmc0.run_emcee(thetaGP, tbin, fbin, efbin, initialize,
 				       nwalkers=nwalkers, burnin=burnin,
 				       nsteps=nsteps, a=a)
@@ -101,8 +102,9 @@ def do_mcmc_N(thetaGP, params, bjd, f, ef, Nmcmc_pnts=2e2,
     for i in range(Ntransits):
 	initialize = np.append(initialize, [.1,.1,params[i,2]*.1,params[i,3]*.1])
     assert 0 not in initialize
-    #tbin, fbin, efbin = boxcar(bjd,f,ef,dt=(bjd.max()-bjd.min())/Nmcmc_pnts)
-    tbin, fbin, efbin = boxcar(bjd,f,ef,dt=np.exp(thetaGP[3])/4.)
+    Prot = np.exp(thetaGP[3])
+    dt = (bjd.max()-bjd.min())/Nmcmc_pnts if Prot/4.>(bjd.max()-bjd.min())/1e2 else Prot/4.
+    tbin, fbin, efbin = boxcar(bjd,f,ef,dt=dt)
     theta_full = np.append(thetaGP, theta)
     sampler, samples = mcmcN.run_emcee(theta_full, tbin, fbin, efbin, initialize,
                                        nwalkers=nwalkers, burnin=burnin,
@@ -120,7 +122,9 @@ def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Nmcmc_pnts=2e2):
     '''Search for periodic transit-like events.'''
     # "detrend" the lc
     #tbin, fbin, efbin = boxcar(bjd, f, ef, dt=(bjd.max()-bjd.min())/Nmcmc_pnts, include_edges=True)
-    tbin, fbin, efbin = boxcar(bjd, f, ef, dt=np.exp(thetaGP[3])/4., include_edges=True)
+    Prot = np.exp(thetaGP[3])
+    dt = (bjd.max()-bjd.min())/Nmcmc_pnts if Prot/4.>(bjd.max()-bjd.min())/1e2 else Prot/4.
+    tbin, fbin, efbin = boxcar(bjd, f, ef, dt=dt, include_edges=True)
     _, mubin, sigbin = mcmc0.get_model0(thetaGP, tbin, fbin, efbin)
     fintmu, fintsig = interp1d(tbin, mubin), interp1d(tbin, sigbin)
     mu, sig = fintmu(bjd), fintsig(bjd)
