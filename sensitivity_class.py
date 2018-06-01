@@ -27,6 +27,10 @@ class Sensitivity:
 	self.params_true = arr
         self.pickleobject()
 
+    def add_EBparams_true(self, arr):
+  	self.EBr1, self.EBr2, self.EBsbratio, self.EBinc, self.EBT0, self.EBP, self.EBq = arr
+	self.pickleobject()
+
     def add_samplesGP(self, arr):
 	self.samplesGP = arr
         self.pickleobject()

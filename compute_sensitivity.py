@@ -39,7 +39,7 @@ def get_timeseries(mag, Teff, Rs, Ps, rpRss, add_systematic=True,
     fcorr = fmodel + np.random.randn(bjd.size) * rms
 
     # add eclipsing binaries (sometimes)
-    ebmodel = get_EB_model(bjd, Rs)
+    ebmodel, EBparams = get_EB_model(bjd, Rs)
     fcorr += ebmodel
 
     # add trends if desired
@@ -63,7 +63,7 @@ def get_timeseries(mag, Teff, Rs, Ps, rpRss, add_systematic=True,
     # update stellar info
     hdr['TESSMAG'], hdr['TEFF'], hdr['RADIUS'] = mag, Teff, Rs
     
-    return hdr, bjd, f, ef, fcorr, params
+    return hdr, bjd, f, ef, fcorr, params, EBparams
 
 
 def get_planet_model(bjd, Ps, rpRss, Rs, N=1e2):
@@ -107,13 +107,14 @@ def get_EB_model(bjd, Rs):
     inc = np.rad2deg(np.arccos(np.random.uniform(-1,1)))
     # sample Kepler EB periods
     Ps, Teffs = np.loadtxt('EBs/Kepler_EBC_v3.dat', delimiter=',', usecols=(1,9)).T
-    g, P = (Teff<=4e3) & (Teff>0), 0
+    g, P = (Teffs<=4e3) & (Teffs>0), 0
     while P <= 0:
-    	P = np.random.choice(Ps) * np.random.normal(1,.1)
+    	P = np.random.choice(Ps[g]) * np.random.normal(1,.1)
     R2 = np.random.uniform(.08, Rs)  # radius of the stellar companion
     b = rvs.impactparam_inc(P, Rs, Rs, inc, mp_Mearth=rvs.kg2Mearth(rvs.Msun2kg(R2)))
+    print b
     if abs(b) > 1:   # no eclipse
-	return np.zeros(bjd.size)
+	return np.zeros(bjd.size), tuple(np.zeros(7))
     else:   # eclipse -> compute the LC model
     	T0 = np.random.uniform(bjd.min(), bjd.max())
     	a = rvs.AU2m(rvs.semimajoraxis(P, Rs, rvs.kg2Mearth(rvs.Msun2kg(R2))))
@@ -121,10 +122,12 @@ def get_EB_model(bjd, Rs):
 	assert r1 < 1
 	assert r2 < 1
 	sbratio = (R2/Rs)**3
-    	return ellc.lc(bjd, r1, r2, sbratio, inc, t_zero=T0, period=P, q=R2/Rs, 
+    	EBlc = ellc.lc(bjd, r1, r2, sbratio, inc, t_zero=T0, period=P, q=R2/Rs, 
 		       ld_1='quad', ldc_1=[-0.0023, 0.1513], 
 		       ld_2='quad', ldc_2=[-0.0023, 0.1513]) - 1
-
+	assert np.all(np.isfinite(EBlc))
+        EBparams = r1, r2, sbratio, inc, T0, P, R2/Rs
+	return EBlc, EBparams
 
 
 def create_summary_image(fname_short, planetcols=['b','g','r','k','c'],
@@ -260,9 +263,9 @@ def MAD(lnLs):
 def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
 			add_systematic=True, N_to_extend_baseline=0):
     # create timeseries and save
-    hdr, bjd, f, ef, fcorr, params = get_timeseries(Tmag, Teff, Rs, Ps, rpRss,
-					            add_systematic, 
-						    N_to_extend_baseline)
+    hdr, bjd, f, ef, fcorr, params, EBparams = get_timeseries(Tmag, Teff, Rs, Ps, rpRss,
+					            	      add_systematic, 
+						      	      N_to_extend_baseline)
     fname_short = fname.replace('.fits','')
     sens = Sensitivity(fname_short)
     sens.add_raw_timeseries(bjd, f, ef)
@@ -270,6 +273,7 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
     # save true parameters for cross-checking
     sens.add_star((Tmag, Rs, Ms, Teff))
     sens.add_params_true(params)
+    sens.add_EBparams_true(EBparams)
     ##save_fits(params, 'Results/%s/params_true'%fname_short)
 
     # fit systematics with a GP
