@@ -43,6 +43,10 @@ class Sensitivity:
 	self.params_guess = arr
         self.pickleobject()
 
+    def add_EBparams_guess(self, arr):
+	self.EBparams_guess = arr
+	self.pickleobject()
+
     def add_detected(self, arr):
 	self.is_detected = arr
         self.pickleobject()

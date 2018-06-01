@@ -121,7 +121,6 @@ def save_fits(arr, fname):
 def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Nmcmc_pnts=2e2):
     '''Search for periodic transit-like events.'''
     # "detrend" the lc
-    #tbin, fbin, efbin = boxcar(bjd, f, ef, dt=(bjd.max()-bjd.min())/Nmcmc_pnts, include_edges=True)
     Prot = np.exp(thetaGP[3])
     dt = (bjd.max()-bjd.min())/Nmcmc_pnts if Prot/4.>(bjd.max()-bjd.min())/1e2 else Prot/4.
     tbin, fbin, efbin = boxcar(bjd, f, ef, dt=dt, include_edges=True)
@@ -154,9 +153,10 @@ def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Nmcmc_pnts=2e2):
     ##save_fits(lnLs_transit, 'Results/%s/lnLs_transit_params'%fname)
 
     print 'Finding transit-like events and making transit parameter guesses...\n'
-    POIs, T0OIs, DOIs, ZOIs, lnLOIs, params = llnl.identify_transit_candidates(Ps, T0s, Ds, Zs, 
-									       lnLs_transit, durations.size,
-									       bjd, fcorr, ef)
+    POIs, T0OIs, DOIs, ZOIs, lnLOIs, params, EBparams = llnl.identify_transit_candidates(Ps, T0s, Ds, Zs, 
+									       		 lnLs_transit, 
+											 durations.size,
+									       		 bjd, fcorr, ef)
     sens.add_OIs(POIs, T0OIs, DOIs, ZOIs, lnLOIs)
     ##save_fits(POIs, 'Results/%s/POIs'%fname)
     ##save_fits(T0OIs, 'Results/%s/T0OIs'%fname)
@@ -164,7 +164,7 @@ def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Nmcmc_pnts=2e2):
     ##save_fits(ZOIs, 'Results/%s/ZOIs'%fname)
     ##save_fits(lnLOIs, 'Results/%s/lnLOIs'%fname)
 
-    return params
+    return params, EBparams
  
 
 def estimate_box_transit_model(P, T0, Rs, t, f, ef):
@@ -214,8 +214,9 @@ def main(fname):
 
     # search for transits in the corrected LC and get the transit parameters guesses
     print 'Searching for transit-like events...\n'
-    params = find_transits(sens, bjd, f, ef, resultsGP[0], hdr, fname_short)
+    params, EBparams = find_transits(sens, bjd, f, ef, resultsGP[0], hdr, fname_short)
     sens.add_params_guess(params)
+    sens.add_EBparams_guess(params)
     ##save_fits(params, 'Results/%s/params_guess'%fname)
 
     # run full mcmc with GP+transit model
