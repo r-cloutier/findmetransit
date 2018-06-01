@@ -129,7 +129,8 @@ def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Nmcmc_pnts=2e2):
     fintmu, fintsig = interp1d(tbin, mubin), interp1d(tbin, sigbin)
     mu, sig = fintmu(bjd), fintsig(bjd)
     fcorr = f - mu + 1
-    sens.add_timeseries(bjd, f, ef, mu, sig, fcorr)
+    sens.add_raw_timeseries(bjd, f, ef)
+    sens.add_timeseries(mu, sig, fcorr)
     ##save_fits(np.array([bjd, f, ef, mu, sig, fcorr]).T, 'Results/%s/time_series'%fname)
 
     # do linear search first

@@ -47,10 +47,13 @@ class Sensitivity:
 	self.thetaGP = arr
         self.pickleobject()
 
-    def add_timeseries(self, bjd, f, ef, mu, sig, fcorr):
+    def add_raw_timeseries(self, bjd, f, ef):
     	self.bjd = bjd
 	self.f = f
 	self.ef = ef
+	self.pickleobject()
+
+    def add_timeseries(self, mu, sig, fcorr):
 	self.mu = mu
 	self.sig = sig
 	self.fcorr = fcorr

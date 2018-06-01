@@ -263,10 +263,11 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
     hdr, bjd, f, ef, fcorr, params = get_timeseries(Tmag, Teff, Rs, Ps, rpRss,
 					            add_systematic, 
 						    N_to_extend_baseline)
-
-    # save true parameters for cross-checking
     fname_short = fname.replace('.fits','')
     sens = Sensitivity(fname_short)
+    sens.add_raw_timeseries(bjd, f, ef)
+
+    # save true parameters for cross-checking
     sens.add_star((Tmag, Rs, Ms, Teff))
     sens.add_params_true(params)
     ##save_fits(params, 'Results/%s/params_true'%fname_short)
