@@ -103,7 +103,8 @@ def batman_transit_model(theta, bjd):
     return m.light_curve(params)
 
 
-def get_EB_model(bjd, Rs):
+# binary frac from 79 M2-M4.5 dwarfs from .1-1e4 AU (http://adsabs.harvard.edu/abs/1997AJ....113.2246R)
+def get_EB_model(bjd, Rs, Mdwarf_binary_frac=.3):
     inc = np.rad2deg(np.arccos(np.random.uniform(-1,1)))
     # sample Kepler EB periods
     Ps, Teffs = np.loadtxt('EBs/Kepler_EBC_v3.dat', delimiter=',', usecols=(1,9)).T
@@ -112,10 +113,8 @@ def get_EB_model(bjd, Rs):
     	P = np.random.choice(Ps[g]) * np.random.normal(1,.1)
     R2 = np.random.uniform(.08, Rs)  # radius of the stellar companion
     b = rvs.impactparam_inc(P, Rs, Rs, inc, mp_Mearth=rvs.kg2Mearth(rvs.Msun2kg(R2)))
-    print b
-    if abs(b) > 1:   # no eclipse
-	return np.zeros(bjd.size), tuple(np.zeros(7))
-    else:   # eclipse -> compute the LC model
+    
+    if (abs(b) <= 1) and (np.random.rand() <= Mdwarf_binary_frac):   # eclipse -> compute the LC model
     	T0 = np.random.uniform(bjd.min(), bjd.max())
     	a = rvs.AU2m(rvs.semimajoraxis(P, Rs, rvs.kg2Mearth(rvs.Msun2kg(R2))))
 	r1, r2 = rvs.Rsun2m(Rs)/a, rvs.Rsun2m(R2)/a
@@ -128,6 +127,9 @@ def get_EB_model(bjd, Rs):
 	assert np.all(np.isfinite(EBlc))
         EBparams = r1, r2, sbratio, inc, T0, P, R2/Rs
 	return EBlc, EBparams
+
+    else:   # no eclipsing binary
+	return np.zeros(bjd.size), tuple(np.zeros(7))
 
 
 def create_summary_image(fname_short, planetcols=['b','g','r','k','c'],
@@ -353,18 +355,6 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
 
 
 if __name__ == '__main__':
-    '''fnum = int(sys.argv[1])
-    P = float(sys.argv[2])
-    rpRs = float(sys.argv[3])
-    Tmag = float(sys.argv[4])
-    Rs = float(sys.argv[5])
-    Ms = float(sys.argv[6])
-    Teff = float(sys.argv[7])
-    for i in range(20):
-        fname = 'MedianTOIsensitivityv3_%.5d_%.3d'%(fnum,i)
-        compute_sensitivity(fname, [P], [rpRs], Tmag, Rs, Ms, Teff)
-    #create_summary_image(fname, pltt=False, label=True)'''
-
     fnum = int(sys.argv[1])
     P = float(sys.argv[2])
     rp = float(sys.argv[3])
