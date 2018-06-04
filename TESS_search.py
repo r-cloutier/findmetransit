@@ -69,7 +69,7 @@ def initialize_GP_hyperparameters(bjd, f, ef):
     return lna, lnl, lnG, lnP, s
 
 
-def do_mcmc_0(sens, bjd, f, ef, fname, Nmcmc_pnts=2e2, 
+def do_mcmc_0(sens, bjd, f, ef, fname, Nmcmc_pnts=3e2, 
 	      nwalkers=100, burnin=200, nsteps=400, a=2):
     '''First fit the PDC LC with a GP and no planet model.'''
     thetaGP = initialize_GP_hyperparameters(bjd, f, ef)
@@ -78,7 +78,10 @@ def do_mcmc_0(sens, bjd, f, ef, fname, Nmcmc_pnts=2e2,
     initialize = np.array([.1,.1,.01,.1,thetaGP[4]*.1])
     assert 0 not in initialize
     Prot = np.exp(thetaGP[3])
-    dt = (bjd.max()-bjd.min())/Nmcmc_pnts if Prot/4.>(bjd.max()-bjd.min())/1e2 else Prot/4.
+    if (Prot/4. > (bjd.max()-bjd.min())/1e2) or (np.arange(bjd.min(), bjd.max(), Prot/4.).size > Nmcmc_pnts):
+        dt = (bjd.max()-bjd.min())/Nmcmc_pnts 
+    else: 
+        dt = Prot/4.
     tbin, fbin, efbin = boxcar(bjd,f,ef,dt=dt)
     sampler, samples = mcmc0.run_emcee(thetaGP, tbin, fbin, efbin, initialize,
 				       nwalkers=nwalkers, burnin=burnin,
@@ -92,7 +95,7 @@ def do_mcmc_0(sens, bjd, f, ef, fname, Nmcmc_pnts=2e2,
     return sampler, samples, results
 
 
-def do_mcmc_N(thetaGP, params, bjd, f, ef, Nmcmc_pnts=2e2,
+def do_mcmc_N(thetaGP, params, bjd, f, ef, Nmcmc_pnts=3e2,
               nwalkers=100, burnin=200, nsteps=400, a=2):
     '''Fit the LC with a GP and a full transit model.'''
     Ntransits = params.size / 4
@@ -103,7 +106,10 @@ def do_mcmc_N(thetaGP, params, bjd, f, ef, Nmcmc_pnts=2e2,
 	initialize = np.append(initialize, [.1,.1,params[i,2]*.1,params[i,3]*.1])
     assert 0 not in initialize
     Prot = np.exp(thetaGP[3])
-    dt = (bjd.max()-bjd.min())/Nmcmc_pnts if Prot/4.>(bjd.max()-bjd.min())/1e2 else Prot/4.
+    if (Prot/4. > (bjd.max()-bjd.min())/1e2) or (np.arange(bjd.min(), bjd.max(), Prot/4.).size > Nmcmc_pnts):
+        dt = (bjd.max()-bjd.min())/Nmcmc_pnts 
+    else: 
+        dt = Prot/4.
     tbin, fbin, efbin = boxcar(bjd,f,ef,dt=dt)
     theta_full = np.append(thetaGP, theta)
     sampler, samples = mcmcN.run_emcee(theta_full, tbin, fbin, efbin, initialize,
@@ -118,11 +124,14 @@ def save_fits(arr, fname):
     hdu.writeto(fname, clobber=True)
 
 
-def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Nmcmc_pnts=2e2):
+def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Nmcmc_pnts=3e2):
     '''Search for periodic transit-like events.'''
     # "detrend" the lc
     Prot = np.exp(thetaGP[3])
-    dt = (bjd.max()-bjd.min())/Nmcmc_pnts if Prot/4.>(bjd.max()-bjd.min())/1e2 else Prot/4.
+    if (Prot/4. > (bjd.max()-bjd.min())/1e2) or (np.arange(bjd.min(), bjd.max(), Prot/4.).size > Nmcmc_pnts):
+    	dt = (bjd.max()-bjd.min())/Nmcmc_pnts
+    else: 
+	dt = Prot/4.
     tbin, fbin, efbin = boxcar(bjd, f, ef, dt=dt, include_edges=True)
     _, mubin, sigbin = mcmc0.get_model0(thetaGP, tbin, fbin, efbin)
     fintmu, fintsig = interp1d(tbin, mubin), interp1d(tbin, sigbin)
