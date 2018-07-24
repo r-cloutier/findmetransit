@@ -1,8 +1,9 @@
 from imports import *
+from scipy.optimize import curve_fit
 import rvs, mcmc1
 
-global dispersion_sig
-dispersion_sig = 2
+global dispersion_sig, depth_sig
+dispersion_sig, depth_sig = 2, 1
 
 def lnlike(bjd, f, ef, fmodel):
     return -.5*(np.sum((f-fmodel)**2 / ef**2 - np.log(1./ef**2)))
@@ -12,6 +13,16 @@ def box_transit_model(theta, t):
     '''Return the box transmit model.'''
     fmodel = np.ones(t.size)
     P, T0, depth, duration = theta
+    phase = foldAt(t, P, T0)
+    phase[phase>.5] -= 1
+    intransit = (phase*P <= .5*duration) & (phase*P >= -.5*duration)
+    fmodel[intransit] = 1. - depth
+    return fmodel
+
+
+def box_transit_model_curve_fit(t, P, T0, depth, duration):
+    '''Return the box transmit model.'''
+    fmodel = np.ones(t.size)
     phase = foldAt(t, P, T0)
     phase[phase>.5] -= 1
     intransit = (phase*P <= .5*duration) & (phase*P >= -.5*duration)
@@ -91,7 +102,6 @@ def find_transit_parameters(bjd, fcorr, ef,
     '''Find periodic transits and return initial guesses of P, T0, 
     duration, and depth.'''
     # find high S/N peaks in lnL as a function of the transit time
-    #SNRs = (lnLs-np.median(lnLs, axis=0)) / np.std(lnLs, axis=0)
     SNRs = (lnLs-np.median(lnLs, axis=0)) / MAD2d(lnLs)
     gSNR = SNRs > SNRthresh
 
@@ -135,7 +145,6 @@ def find_transit_parameters(bjd, fcorr, ef,
 
 	    # search for all periodic transits (periods between transit events)
 	    Ntransits = T0s.size
-	    ##T0s = np.repeat(T0s,Ntransits).reshape(Ntransits,Ntransits)
 	    for j in range(Ntransits):
 		for k in range(Ntransits):
 		    if j != k:
@@ -310,6 +319,13 @@ def identify_transit_candidates(Ps, T0s, Ds, Zs, lnLs, Ndurations,
         params, EBparams
 
 
+def _optimize_box_transit(theta, bjd, fcorr, ef):
+    assert len(theta) == 4
+    #P, T0, depth, duration = theta
+    popt,_ = curve_fit(box_transit_model_curve_fit, bjd, fcorr, p0=theta, sigma=ef, absolute_sigma=True)
+    return popt
+
+
 def confirm_transits(params, bjd, fcorr, ef):
     '''Look at proposed transits and confirm whether or not a significant 
     dimming is seen.'''
@@ -319,24 +335,29 @@ def confirm_transits(params, bjd, fcorr, ef):
     for i in range(Ntransits):
 	print float(i) / Ntransits
 	# run mcmc to get best parameters for the proposed transit
-	initialize = np.array([params[i,3],params[i,3],.1*params[i,2],
-                               .1*params[i,3]])
-  	sampler, samples = mcmc1.run_emcee(params[i], params[i], 
-					   bjd, fcorr, ef, initialize, a=1.9)
-	results = mcmc1.get_results(samples)
-	P, T0, depth, duration = results[0]
-	paramsout[i] = P, T0, depth, duration
+	#initialize = np.array([params[i,3],params[i,3],.1*params[i,2],
+        #                       .1*params[i,3]])
+  	#sampler, samples = mcmc1.run_emcee(params[i], params[i], 
+	#				   bjd, fcorr, ef, initialize, a=1.9)
+	#results = mcmc1.get_results(samples)
+	# get optimized parameters for this transit
+	paramsout[i] = _optimize_box_transit(params[i], bjd, fcorr, ef)
+	P, T0, depth, duration = paramsout[i]
+
+	# get in and out of transit window
         phase = foldAt(bjd, P, T0)
         phase[phase > .5] -= 1
-	Dfrac = .3   # fraction of the duration in-transit (should be <.5 to ignore ingress & egress)
+	Dfrac = .25   # fraction of the duration in-transit (should be <.5 to ignore ingress & egress)
         intransit = (phase*P >= -Dfrac*duration) & (phase*P <= Dfrac*duration)
 	outtransit = (phase*P <= -(1.+Dfrac)*duration) | (phase*P >= (1.+Dfrac)*duration)
         ##plt.plot(phase, fcorr, 'ko', phase[intransit], fcorr[intransit], 'bo'), plt.show()
+
         # check scatter in and out of the proposed transit to see if the transit is real
 	cond1 = np.median(fcorr[intransit]) <= np.median(fcorr[outtransit]) - dispersion_sig*MAD1d(fcorr[outtransit])
-	sigdepth = np.mean(results[:,2])
-  	cond2 = (1-np.median(fcorr[intransit]) <= depth+sigdepth) & \
-	   	(1-np.median(fcorr[intransit]) >= depth-sigdepth)
+	# also check that the transit depth is significant relative to the noise
+	sigdepth = np.median(ef)
+  	cond2 = (1-np.median(fcorr[intransit]) <= depth+depth_sig*sigdepth) & \
+	   	(1-np.median(fcorr[intransit]) >= depth-depth_sig*sigdepth)
 	if cond1 and cond2:
 	    pass
 	else:
