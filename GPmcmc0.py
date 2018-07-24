@@ -3,12 +3,11 @@ from priors import *
 
 def get_model0(theta, t, f, ef):
     a, l, G, P = np.exp(theta[:4])
-    s = theta[4]
     k1 = george.kernels.ExpSquaredKernel(l)
     k2 = george.kernels.ExpSine2Kernel(G,P)
     gp = george.GP(a*(k1+k2))
     try:
-        gp.compute(t, np.sqrt(ef**2 + s**2))
+        gp.compute(t, ef)
     except (ValueError, np.linalg.LinAlgError):
         return -np.inf
     mu, cov = gp.predict(f, t)
@@ -23,13 +22,12 @@ def lnlike(theta, t, f, ef):
 
 
 def lnprior(theta):
-    lna, lnl, lnG, lnP, s = theta
-    lps = np.zeros(5)
+    lna, lnl, lnG, lnP = theta
+    lps = np.zeros(4)
     lps[0] = lnuniform(lna, np.log(1e-5), np.log(1))
     lps[1] = lnuniform(lnl, np.log(1e-1), np.log(1e8))
     lps[2] = lnuniform(lnG, np.log(1e-3), np.log(1e3))
     lps[3] = lnuniform(lnP, np.log(1e-1), np.log(5e2))
-    lps[4] = lnuniform(s, 0, 1) if s > 0 else -np.inf
     return lps.sum()
 
 

@@ -73,7 +73,7 @@ def initialize_GP_hyperparameters(bjd, f, ef, Pindex=0):
     return lna, lnl, lnG, lnP#, s
 
 
-def do_optimize_0(sens, bjd, f, ef, fname, N=10, Npnts=5e2):
+def do_optimize_0(bjd, f, ef, fname, N=10, Npnts=5e2):
     '''First fit the PDC LC with GP and a no planet model using an optimization 
     routine and tested with N different initializations.'''
     # test various hyperparameter initializations and keep the one resulting
@@ -99,12 +99,12 @@ def do_optimize_0(sens, bjd, f, ef, fname, N=10, Npnts=5e2):
     # select the most gaussian-like residuals
     g = pvalues == pvalues.max()
     if g.sum() == 1:
-        sens.thetaGPin = thetaGPs_in[g]
-        sens.thetaGPout = thetaGPs_out[g]
+        thetaGPin = thetaGPs_in[g]
+        thetaGPout = thetaGPs_out[g]
     else:
-        sens.thetaGPin = thetaGPs_in[0]
-        sens.thetaGPout = thetaGPs_out[0]
-    return theta
+        thetaGPin = thetaGPs_in[0]
+        thetaGPout = thetaGPs_out[0]
+    return thetaGPin, thetaGPout 
 
 
 def fit_GP_0(thetaGP, tbin, fbin, efbin, bjd):
@@ -169,9 +169,9 @@ def do_mcmc_N(thetaGP, params, bjd, f, ef, Nmcmc_pnts=3e2,
         dt = Prot/4.
     tbin, fbin, efbin = boxcar(bjd,f,ef,dt=dt)
     theta_full = np.append(thetaGP, theta)
-    sampler, samples = mcmcN.run_emcee(theta_full, tbin, fbin, efbin, initialize,
-                                       nwalkers=nwalkers, burnin=burnin,
-                                       nsteps=nsteps, a=a)
+    sampler, samples = mcmcN.run_emcee(theta_full, tbin, fbin, efbin,
+                                       initialize, nwalkers=nwalkers,
+                                       burnin=burnin, nsteps=nsteps, a=a)
     results = mcmcN.get_results(samples)
     return sampler, samples, results
 
@@ -181,12 +181,14 @@ def save_fits(arr, fname):
     hdu.writeto(fname, clobber=True)
 
 
-def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Nmcmc_pnts=3e2):
+def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Npnts=5e2):
     '''Search for periodic transit-like events.'''
     # "detrend" the lc
+    assert len(thetaGP) == 4
     Prot = np.exp(thetaGP[3])
-    if (Prot/4. > (bjd.max()-bjd.min())/1e2) or (np.arange(bjd.min(), bjd.max(), Prot/4.).size > Nmcmc_pnts):
-    	dt = (bjd.max()-bjd.min())/Nmcmc_pnts
+    if (Prot/4. > (bjd.max()-bjd.min())/1e2) or \
+       (np.arange(bjd.min(), bjd.max(), Prot/4.).size > Npnts):
+    	dt = (bjd.max()-bjd.min())/Npnts
     else: 
 	dt = Prot/4.
     tbin, fbin, efbin = boxcar(bjd, f, ef, dt=dt, include_edges=True)

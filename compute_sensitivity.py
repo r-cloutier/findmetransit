@@ -287,21 +287,20 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
 
     # fit systematics with a GP
     print 'Fitting LC with GP alone...\n'
-    # HERE
-    samplerGP, samplesGP, resultsGP = do_mcmc_0(sens, bjd, f, ef, fname_short)
-    sens.samplesGP = samplesGP
-    sens.resultsGP = resultsGP
+    #samplerGP, samplesGP, resultsGP = do_mcmc_0(sens, bjd, f, ef, fname_short)
+    #sens.samplesGP = samplesGP
+    #sens.resultsGP = resultsGP
+    thetaGPin, thetaGPout = do_optimize_0(bjd, f, ef, fname_short)
+    sens.thetaGP, sens.resultsGP = thetaGPin, thetaGPout
 
     # search for transits in the corrected LC and get the transit parameters guesses
     print 'Searching for transit-like events...\n'
-    params, EBparams = find_transits(sens, bjd, f, ef, resultsGP[0], hdr, fname_short)
-    sens.add_params_guess(params)
-    ##save_fits(params, 'Results/%s/params_guess'%fname_short)
+    params, EBparams = find_transits(sens, bjd, f, ef, thetaGPout, hdr, fname_short)
+    sens.params_guess = params
 
     # is the planet detected?
     detected = True if np.any(np.isclose(params[:,0], Ps[0], atol=Ps[0]*.02)) else False
-    sens.add_detected(np.array([detected]).astype(int))
-    ##save_fits(np.array([detected]).astype(int), 'Results/%s/is_detected'%fname_short)
+    sens.is_detected = np.array([detected]).astype(int)
 
 
 
