@@ -11,14 +11,14 @@ global medTmag, medTeff, medRs
 medTmag, medTeff, medRs = 10.5, 3400, 0.33
 
 
-def scale_rms(mag):
+def rescale_rms(mag):
     # get values from simulated TESS LC (rms is scatter not mean ef)
     rms0, mag0 = 0.0017390130051, 8.02999973
     flux_ratio = 10**(-.4*(mag0-mag))
     return rms0 * np.sqrt(flux_ratio)
 
 
-def get_timeseries(mag, Teff, Rs, Ps, rpRss, add_systematic=True,
+def get_timeseries(mag, Teff, Rs, Ms, Ps, rpRss, add_systematic=True,
 		   Ndays_field=27):
     # get WF
     fname = 'tess2019128220341-0000000005712108-0016-s_lc.fits'
@@ -35,7 +35,7 @@ def get_timeseries(mag, Teff, Rs, Ps, rpRss, add_systematic=True,
     bjd = bjd[g]
     
     # get uncertainties
-    rms = scale_rms(mag)
+    rms = rescale_rms(mag)
     ef = np.repeat(rms, bjd.size)
 
     # add planet models
@@ -66,7 +66,9 @@ def get_timeseries(mag, Teff, Rs, Ps, rpRss, add_systematic=True,
     
     # update stellar info
     hdr['TESSMAG'], hdr['TEFF'], hdr['RADIUS'] = mag, Teff, Rs
-    
+    logg = np.log10(6.67e-11*rvs.Msun2kg(Ms)*1e2 / rvs.Rsun2m(Rs)**2)
+    hdr['LOGG'] = logg
+
     return hdr, bjd, f, ef, fcorr, params, EBparams
 
 
@@ -267,28 +269,28 @@ def MAD(lnLs):
 
 
 def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
-			add_systematic=True, N_to_extend_baseline=0):
+			add_systematic=True, Ndays_field=27):
     # create timeseries and save
-    hdr, bjd, f, ef, fcorr, params, EBparams = get_timeseries(Tmag, Teff, Rs, Ps, rpRss,
+    assert len(Ps) == len(rpRss)
+    hdr, bjd, f, ef, fcorr, params, EBparams = get_timeseries(Tmag, Teff, Rs,
+                                                              Ms, Ps, rpRss,
 					            	      add_systematic, 
-						      	      N_to_extend_baseline)
+						      	      Ndays_field)
     fname_short = fname.replace('.fits','')
     sens = Sensitivity(fname_short)
-    sens.add_raw_timeseries(bjd, f, ef)
+    sens.bjd, sens.f, sens.ef = bjd, f, ef
 
     # save true parameters for cross-checking
-    sens.add_star((Tmag, Rs, Ms, Teff))
-    sens.add_params_true(params)
-    sens.add_EBparams_true(EBparams)
-    ##save_fits(params, 'Results/%s/params_true'%fname_short)
+    sens.Tmag, sens.Rs, sens.Ms, sens.Teff = Tmag, Rs, Ms, Teff
+    sens.params_true = params
+    sens.EBr1, sens.EBr2, sens.EBsbratio, sens.EBinc, sens.EBT0, sens.EBP, sens.EBq = EBparams
 
     # fit systematics with a GP
     print 'Fitting LC with GP alone...\n'
+    # HERE
     samplerGP, samplesGP, resultsGP = do_mcmc_0(sens, bjd, f, ef, fname_short)
-    sens.add_samplesGP(samplesGP)
-    sens.add_resultsGP(resultsGP)
-    ##save_fits(samplesGP, 'Results/%s/GP_samples'%fname_short)
-    ##save_fits(resultsGP, 'Results/%s/GP_results'%fname_short)
+    sens.samplesGP = samplesGP
+    sens.resultsGP = resultsGP
 
     # search for transits in the corrected LC and get the transit parameters guesses
     print 'Searching for transit-like events...\n'

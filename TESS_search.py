@@ -73,7 +73,7 @@ def do_mcmc_0(sens, bjd, f, ef, fname, Nmcmc_pnts=3e2,
 	      nwalkers=100, burnin=200, nsteps=400, a=2):
     '''First fit the PDC LC with a GP and no planet model.'''
     thetaGP = initialize_GP_hyperparameters(bjd, f, ef)
-    sens.add_thetaGP(thetaGP)
+    sens.thetaGP = thetaGP
     ##save_fits(thetaGP, 'Results/%s/GP_theta'%fname)
     initialize = np.array([.1,.1,.01,.1,thetaGP[4]*.1])
     assert 0 not in initialize
@@ -137,23 +137,21 @@ def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Nmcmc_pnts=3e2):
     fintmu, fintsig = interp1d(tbin, mubin), interp1d(tbin, sigbin)
     mu, sig = fintmu(bjd), fintsig(bjd)
     fcorr = f - mu + 1
-    sens.add_raw_timeseries(bjd, f, ef)
-    sens.add_timeseries(mu, sig, fcorr)
-    ##save_fits(np.array([bjd, f, ef, mu, sig, fcorr]).T, 'Results/%s/time_series'%fname)
+    sens.bjd, sens.f, sens.ef = bjd, f, ef
+    sens.mu, sens.sig, sens.fcorr = mu, sig, fcorr
 
     # do linear search first
     print 'Computing lnL over transit times and durations...\n'
     transit_times, durations, lnLs, depths = llnl.linear_search(bjd, fcorr, ef)
-    sens.add_linearsearch(transit_times, durations, lnLs, depths)
-    ##save_fits(transit_times, 'Results/%s/transit_times'%fname)
-    ##save_fits(durations, 'Results/%s/durations'%fname)
-    ##save_fits(lnLs, 'Results/%s/lnLs_linearsearch'%fname)
-    ##save_fits(depths, 'Results/%s/depths'%fname)
+    sens.transit_times, sens.durations = transit_times, durations
+    sens.lnLs_linearsearch, sens.depths_linearsearch = lnLs, depths
 
     # get transit candidates and initial parameters guesses
     print 'Computing lnL over periods and mid-transit times...\n'
-    Ps, T0s, Ds, Zs, lnLs_transit = llnl.compute_transit_lnL(bjd, fcorr, ef, transit_times, durations, lnLs, depths, 
-						     	     SNRthresh)
+    Ps, T0s, Ds, Zs, lnLs_transit = llnl.compute_transit_lnL(bjd, fcorr, ef,
+                                                             transit_times,
+                                                             durations, lnLs,
+                                                             depths, SNRthresh)
     sens.add_paramguesses(Ps, T0s, Ds, Zs, lnLs_transit)
     ##save_fits(Ps, 'Results/%s/P_params'%fname)
     ##save_fits(T0s, 'Results/%s/T0_params'%fname)
