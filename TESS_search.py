@@ -104,7 +104,7 @@ def do_optimize_0(bjd, f, ef, fname, N=10, Npnts=5e2):
     else:
         thetaGPin = thetaGPs_in[0]
         thetaGPout = thetaGPs_out[0]
-    return thetaGPin, thetaGPout 
+    return thetaGPin.reshape(4), thetaGPout.reshape(4)
 
 
 def fit_GP_0(thetaGP, tbin, fbin, efbin, bjd):
