@@ -211,25 +211,16 @@ def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Npnts=5e2):
                                                              transit_times,
                                                              durations, lnLs,
                                                              depths, SNRthresh)
-    sens.add_paramguesses(Ps, T0s, Ds, Zs, lnLs_transit)
-    ##save_fits(Ps, 'Results/%s/P_params'%fname)
-    ##save_fits(T0s, 'Results/%s/T0_params'%fname)
-    ##save_fits(Ds, 'Results/%s/durations_params'%fname)
-    ##save_fits(Zs, 'Results/%s/depths_params'%fname)
-    ##save_fits(lnLs_transit, 'Results/%s/lnLs_transit_params'%fname)
+    sens.params_guess = (Ps, T0s, Ds, Zs, lnLs_transit)
 
     print 'Finding transit-like events and making transit parameter guesses...\n'
     POIs, T0OIs, DOIs, ZOIs, lnLOIs, params, EBparams = llnl.identify_transit_candidates(Ps, T0s, Ds, Zs, 
 									       		 lnLs_transit, 
 											 durations.size,
 									       		 bjd, fcorr, ef)
-    sens.add_OIs(POIs, T0OIs, DOIs, ZOIs, lnLOIs)
-    ##save_fits(POIs, 'Results/%s/POIs'%fname)
-    ##save_fits(T0OIs, 'Results/%s/T0OIs'%fname)
-    ##save_fits(DOIs, 'Results/%s/DOIs'%fname)
-    ##save_fits(ZOIs, 'Results/%s/ZOIs'%fname)
-    ##save_fits(lnLOIs, 'Results/%s/lnLOIs'%fname)
+    sens.POIs, sens.T0OIs, sens.DOIs, sens.ZOIs, sens.lnLOIs = POIs, T0OIs, DOIs, ZOIs, lnLOIs
 
+    # return the parameters (P,T0,D,Z=depth) of the confirmed transit candidates
     return params, EBparams
  
 
@@ -281,9 +272,8 @@ def main(fname):
     # search for transits in the corrected LC and get the transit parameters guesses
     print 'Searching for transit-like events...\n'
     params, EBparams = find_transits(sens, bjd, f, ef, resultsGP[0], hdr, fname_short)
-    sens.add_params_guess(params)
-    sens.add_EBparams_guess(params)
-    ##save_fits(params, 'Results/%s/params_guess'%fname)
+    sens.params_guess = params
+    sens.EBparams_guess = EBparams
 
     # run full mcmc with GP+transit model
     # how to do the GP with the full LC??

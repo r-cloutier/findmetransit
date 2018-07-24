@@ -56,10 +56,10 @@ def get_depth_lnlike(theta, bjd, fcorr, ef, depthmax=.1, N=2e2):
 
 def linear_search(bjd, fcorr, ef):
     '''Evaluate the lnL as a function of transit duration and 
-    transit time or epoch of a transit.'''
+    transit time/epoch of a transit.'''
     # setup transit time and duration grids
     transit_times = np.arange(bjd.min(), bjd.max(), 30./60/24)
-    durations = np.array([1.2,2.4,4.8]) / 24   # coarse grid in transit duration
+    durations = np.array([1.2,2.4,4.8]) / 24  # coarse grid in transit duration
 
     # get max lnL depth over the linear grid of transit times and durations
     NT, ND = transit_times.size, durations.size
@@ -183,8 +183,10 @@ def compute_transit_lnL(bjd, fcorr, ef, transit_times, durations, lnLs, depths, 
     assert lnLs.shape == (transit_times.size, durations.size)
     assert depths.shape == (transit_times.size, durations.size)
     Ps, T0s, Ds, Zs, lnLs_transit = find_transit_parameters(bjd, fcorr, ef,
-							    transit_times, durations, 
-							    lnLs, depths, SNRthresh)
+							    transit_times,
+                                                            durations, 
+							    lnLs, depths,
+                                                            SNRthresh)
     assert Ps.size == T0s.size
     assert Ps.size == Ds.size
     assert Ps.size == Zs.size
@@ -247,7 +249,8 @@ def remove_multiples(bjd, Ps, T0s, Ds, Zs, lnLs, dP=.1):
     return Ps_final, T0s_final, Ds_final, Zs_final, lnLs_final
 
 
-def identify_transit_candidates(Ps, T0s, Ds, Zs, lnLs, Ndurations, bjd, fcorr, ef):
+def identify_transit_candidates(Ps, T0s, Ds, Zs, lnLs, Ndurations,
+                                bjd, fcorr, ef):
     '''Given the transit parameters and their lnLs, identify transit 
     candidates.'''
     assert Ps.size == T0s.size
@@ -258,9 +261,12 @@ def identify_transit_candidates(Ps, T0s, Ds, Zs, lnLs, Ndurations, bjd, fcorr, e
     # remove common periods based on maximum likelihood 
     dP = .1
     sort = np.argsort(Ps)
-    POIs, T0OIs, DOIs, ZOIs, lnLOIs = Ps[sort], T0s[sort], Ds[sort], Zs[sort], lnLs[sort]
-    POIs_red, T0OIs_red, DOIs_red, ZOIs_red, lnLOIs_red = np.zeros(0), np.zeros(0), \
-							  np.zeros(0), np.zeros(0), \
+    POIs, T0OIs, DOIs, ZOIs, lnLOIs = Ps[sort], T0s[sort], Ds[sort], Zs[sort], \
+                                      lnLs[sort]
+    POIs_red, T0OIs_red, DOIs_red, ZOIs_red, lnLOIs_red = np.zeros(0), \
+                                                          np.zeros(0), \
+							  np.zeros(0), \
+                                                          np.zeros(0), \
 							  np.zeros(0)
     for i in range(POIs.size):
         isclose = np.isclose(POIs, POIs[i], atol=dP*2)
@@ -270,7 +276,7 @@ def identify_transit_candidates(Ps, T0s, Ds, Zs, lnLs, Ndurations, bjd, fcorr, e
             T0OIs_red = np.append(T0OIs_red, T0OIs[g])
             DOIs_red = np.append(DOIs_red, DOIs[g])
             ZOIs_red = np.append(ZOIs_red, ZOIs[g])
-	    lnLOIs_red = np.append(lnLOIs_red, lnLOIs[g])
+            lnLOIs_red = np.append(lnLOIs_red, lnLOIs[g])
     _,unique = np.unique(POIs_red, return_index=True)
     POIs_red, T0OIs_red, DOIs_red, ZOIs_red, lnLOIs_red = POIs_red[unique], \
 							  T0OIs_red[unique], \
@@ -300,19 +306,21 @@ def identify_transit_candidates(Ps, T0s, Ds, Zs, lnLs, Ndurations, bjd, fcorr, e
     # try to identify EBs
     params, EBparams = identify_EBs(params, bjd, fcorr, ef)
 
-    return POIs_final, T0OIs_final, DOIs_final, ZOIs_final, lnLOIs_final, params, EBparams
+    return POIs_final, T0OIs_final, DOIs_final, ZOIs_final, lnLOIs_final, \
+        params, EBparams
 
 
 def confirm_transits(params, bjd, fcorr, ef):
-    '''Look at proposed transits and confirm whether or not a significant dimming 
-    is seen.'''
+    '''Look at proposed transits and confirm whether or not a significant 
+    dimming is seen.'''
     Ntransits = params.shape[0]
     paramsout, to_remove_inds = np.zeros((Ntransits,4)), np.zeros(0)
     print 'Confirming proposed transits...'
     for i in range(Ntransits):
 	print float(i) / Ntransits
 	# run mcmc to get best parameters for the proposed transit
-	initialize = np.array([params[i,3],params[i,3],.1*params[i,2],.1*params[i,3]])
+	initialize = np.array([params[i,3],params[i,3],.1*params[i,2],
+                               .1*params[i,3]])
   	sampler, samples = mcmc1.run_emcee(params[i], params[i], 
 					   bjd, fcorr, ef, initialize, a=1.9)
 	results = mcmc1.get_results(samples)
