@@ -3,7 +3,8 @@ import os
 
 start, num = 0, 0
 NP, Nrps = 15, 6
-Ps = np.logspace(np.log10(.5), np.log10(351), NP)
+Ndays_feild = 27
+Ps = np.logspace(np.log10(.5), np.log10(Ndays_field), NP)
 #rpRss = np.linspace(.1, .3, NrpRs)
 rps = np.logspace(np.log10(.5), np.log10(15), Nrps)
 
@@ -17,6 +18,7 @@ for i in range(NP):
         num += 1
         g = g.replace('<<P>>', '%.5f'%Ps[i])
         g = g.replace('<<rp>>', '%.5f'%rps[j])
+	g = g.replace('<<Ndays>>', '%.2f'%Ndays_field)
         h = open('jobscript', 'w')
         h.write(g)
         h.close()

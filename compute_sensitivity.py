@@ -19,17 +19,21 @@ def scale_rms(mag):
 
 
 def get_timeseries(mag, Teff, Rs, Ps, rpRss, add_systematic=True,
-		   N_to_extend_baseline=0):
+		   Ndays_field=27):
     # get WF
     fname = 'tess2019128220341-0000000005712108-0016-s_lc.fits'
     hdu = download_one_fits(fname)
     hdr, bjdorig,_,_ = get_lc(hdu)
     # extend to longer baselines (i.e. more than 27 days)
-    dt = np.median(np.diff(bjdorig))
+    dt = 2.  # min
     bjd = bjdorig + 0
-    for i in range(int(N_to_extend_baseline)):
+    assert 27 <= Ndays_field <= 351
+    N_to_extend_baseline = int(Ndays_field/27.)
+    for i in range(N_to_extend_baseline):
     	bjd = np.append(bjd, bjdorig+(bjd.max()-bjdorig.min())+dt)    
-
+    g = (bjd-bjd.min() <= Ndays_field)
+    bjd = bjd[g]
+    
     # get uncertainties
     rms = scale_rms(mag)
     ef = np.repeat(rms, bjd.size)
@@ -39,7 +43,7 @@ def get_timeseries(mag, Teff, Rs, Ps, rpRss, add_systematic=True,
     fcorr = fmodel + np.random.randn(bjd.size) * rms
 
     # add eclipsing binaries (sometimes)
-    ebmodel, EBparams = get_EB_model(bjd, Rs)
+    ebmodel, EBparams = get_EB_model(bjd, Rs, Mdwarf_binary_frac=0)
     fcorr += ebmodel
 
     # add trends if desired
@@ -353,21 +357,25 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
 	plt.show()
 
 
-
 if __name__ == '__main__':
+    # create light curve for this planet
     fnum = int(sys.argv[1])
     P = float(sys.argv[2])
     rp = float(sys.argv[3])
+    Ndays_field = float(sys.argv[4])
     Tmag, Teff, Rs, Ms = np.loadtxt('CTL/CTL_RC.dat', delimiter=',').T
+
     # cut in Tmag such that the sample contains ~1e4 stars from which we expect to detect 1e4*.01~1e2 planets
     #Tmag_fullsky = np.repeat(Tmag,12)  # Tmag only covers 1/12 of the sky
     #plt.hist(Tmag_fullsky, bins=1000, log=True, histtype='step', cumulative=True), plt.axhline(1e4), plt.show()
     g = (Tmag < 11.1) & (Teff<4e3)
     Tmag, Teff, Rs, Ms = Tmag[g], Teff[g], Rs[g], Ms[g]
-    Nplanets_per_star = 20
-    for i in range(Nplanets_per_star):
-	fname = 'TOIsensitivity351_%.5d_%.3d'%(fnum,i)
-	g = np.random.randint(0,Tmag.size)
-	rpRs = rvs.Rearth2m(rp) / rvs.Rsun2m(Rs[g])
-	compute_sensitivity(fname, [P], [rpRs], Tmag[g], Rs[g], Ms[g], Teff[g],
-			    N_to_extend_baseline=np.ceil(P/27.)-1)
+
+    # for this planet sample
+    Nstars_per_star = 20
+    for i in range(Nstars_per_star):
+        fname = 'TOIsensitivity27_%.5d_%.3d'%(fnum,i)
+        g = np.random.randint(0,Tmag.size)  # get random star from the candidate target list
+        rpRs = rvs.Rearth2m(rp) / rvs.Rsun2m(Rs[g])
+        compute_sensitivity(fname, [P], [rpRs], Tmag[g], Rs[g], Ms[g], Teff[g],
+                            Ndays_field=Ndays_field)
