@@ -3,7 +3,7 @@ from scipy.optimize import curve_fit
 import rvs, mcmc1
 
 global dispersion_sig, depth_sig
-dispersion_sig, depth_sig = 2, 1
+dispersion_sig, depth_sig = 1.5, 1
 
 def lnlike(bjd, f, ef, fmodel):
     return -.5*(np.sum((f-fmodel)**2 / ef**2 - np.log(1./ef**2)))
@@ -299,7 +299,8 @@ def identify_transit_candidates(Ps, T0s, Ds, Zs, lnLs, Ndurations,
 			 	lnLOIs_red)
 
     # get initial parameter guess for identified transits
-    params = np.array([POIs_final, T0OIs_final, ZOIs_final, DOIs_final]).T
+    g = ZOIs_final > 0
+    params = np.array([POIs_final, T0OIs_final, ZOIs_final, DOIs_final]).T[g]
 
     # remove duplicates
     params = params[np.unique(params[:,0], return_index=True)[1]]
