@@ -220,6 +220,7 @@ def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Npnts=5e2):
     transit_times, durations, lnLs, depths = llnl.linear_search(bjd, fcorr, ef)
     sens.transit_times, sens.durations = transit_times, durations
     sens.lnLs_linearsearch, sens.depths_linearsearch = lnLs, depths
+    sens.SNRs_linearsearch = (lnLs-np.median(lnLs, axis=0)) / llnl.MAD2d(lnLs)
 
     # get transit candidates and initial parameters guesses
     print 'Computing lnL over periods and mid-transit times...\n'
