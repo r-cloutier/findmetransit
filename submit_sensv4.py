@@ -3,7 +3,7 @@ import os
 
 start, num = 0, 0
 NP, Nrps = 15, 6
-Ndays_feild = 27
+Ndays_field = 27.4
 Ps = np.logspace(np.log10(.5), np.log10(Ndays_field), NP)
 #rpRss = np.linspace(.1, .3, NrpRs)
 rps = np.logspace(np.log10(.5), np.log10(15), Nrps)

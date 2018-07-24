@@ -5,6 +5,7 @@ import GPmcmcN as mcmcN
 import linear_lnlike as llnl
 import rvs
 from sensitivity_class import Sensitivity
+from scipy.stats import normaltest
 
 global SNRthresh
 SNRthresh = 5
@@ -52,33 +53,89 @@ def boxcar(t, f, ef, dt=.2, include_edges=False):
     return tbin, fbin, efbin
 
 
-def initialize_GP_hyperparameters(bjd, f, ef):
+def initialize_GP_hyperparameters(bjd, f, ef, Pindex=0):
     '''Guess initial values of the GP hyperparameters.'''
-    # a from binned LC
-    tbin, fbin, efbin = boxcar(bjd, f, ef)
-    lna = np.log(np.max(abs(fbin-fbin.mean())) * .75)
     # P and l from periodogram
-    per,_,pwrn = compute_LSperiodogram(bjd, f, ef, plims=(1.1,bjd.max()-bjd.min()))
+    per,_,pwrn = compute_LSperiodogram(bjd, f, ef,
+                                       plims=(1.1,bjd.max()-bjd.min()))
     ##plt.plot(per, pwrn, 'k-'), plt.xscale('log'), plt.show()
-    Pgp, inds, i = 1, np.argsort(pwrn)[::-1], 0
+    Pgp, inds, i = 1, np.argsort(pwrn)[::-1], int(Pindex)
+    # ensure Pgp is not within 5% of 1 or 2 days
     while np.isclose(Pgp,1,rtol=.05) or np.isclose(Pgp,2,rtol=.05):
 	Pgp = per[inds[i]]
 	i += 1
-    lnl, lnG, lnP = np.log(Pgp), 0., np.log(Pgp)
+    lnl, lnG, lnP = np.log(Pgp*3), 0., np.log(Pgp)
+    # s is just a fraction of the photometric uncertainty
     s = np.median(ef)*.1
-    return lna, lnl, lnG, lnP, s
+    # a from binned LC
+    tbin, fbin, efbin = boxcar(bjd, f, ef)
+    lna = np.log(np.max(abs(fbin-fbin.mean())) * .75)
+    return lna, lnl, lnG, lnP#, s
 
 
-def do_mcmc_0(sens, bjd, f, ef, fname, Nmcmc_pnts=3e2, 
-	      nwalkers=100, burnin=200, nsteps=400, a=2):
+def do_optimize_0(sens, bjd, f, ef, fname, N=10, Npnts=5e2):
+    '''First fit the PDC LC with GP and a no planet model using an optimization 
+    routine and tested with N different initializations.'''
+    # test various hyperparameter initializations and keep the one resulting
+    # in the most gaussian-like residuals
+    N = int(N)
+    pvalues, thetaGPs_in, thetaGPs_out = np.zeros(N), np.zeros((N,4)), \
+                                         np.zeros((N,4))
+    for i in range(N):
+        # get initial GP parameters (P, and l from periodogram)
+        thetaGPs_in[i] = initialize_GP_hyperparameters(bjd, f, ef, Pindex=i)
+        Prot = np.exp(thetaGPs_in[i,3])
+        # bin the light curve
+        if (Prot/4. > (bjd.max()-bjd.min())/1e2) or \
+           (np.arange(bjd.min(), bjd.max(), Prot/4.).size > Npnts):
+            dt = (bjd.max()-bjd.min())/Npnts 
+        else: 
+            dt = Prot/4.
+        tbin, fbin, efbin = boxcar(bjd,f,ef,dt=dt)
+        gp,mu,sig,thetaGPs_out[i] = fit_GP_0(thetaGPs_in[i],
+                                             tbin, fbin, efbin, bjd)
+        # compute residuals and the normality test p-value
+        _,pvalues[i] = normaltest(fbin-mu)
+    # select the most gaussian-like residuals
+    g = pvalues == pvalues.max()
+    if g.sum() == 1:
+        sens.thetaGPin = thetaGPs_in[g]
+        sens.thetaGPout = thetaGPs_out[g]
+    else:
+        sens.thetaGPin = thetaGPs_in[0]
+        sens.thetaGPout = thetaGPs_out[0]
+    return theta
+
+
+def fit_GP_0(thetaGP, tbin, fbin, efbin, bjd):
+    '''optimize the hyperparameters of this quasi-periodic GP'''
+    assert len(thetaGP) == 4
+    a, l, G, Pgp = np.exp(thetaGP)
+    k1 = george.kernels.ExpSquaredKernel(l)
+    k2 = george.kernels.ExpSine2Kernel(G,Pgp)
+    gp = george.GP(a*(k1+k2))
+    results = gp.optimize(tbin, fbin, efbin)
+    try:
+        gp.compute(tbin, efbin)
+    except (ValueError, np.linalg.LinAlgError):
+        return np.repeat(None,4)
+    mu, cov = gp.predict(fbin, tbin)
+    sig = np.sqrt(np.diag(cov))
+    return gp, mu, sig, results[0]
+    
+
+def OLDdo_mcmc_0(sens, bjd, f, ef, fname, Nmcmc_pnts=3e2, 
+	         nwalkers=100, burnin=200, nsteps=400, a=2):
     '''First fit the PDC LC with a GP and no planet model.'''
+    # get initial GP parameters (P, and l from periodogram)
     thetaGP = initialize_GP_hyperparameters(bjd, f, ef)
     sens.thetaGP = thetaGP
-    ##save_fits(thetaGP, 'Results/%s/GP_theta'%fname)
     initialize = np.array([.1,.1,.01,.1,thetaGP[4]*.1])
     assert 0 not in initialize
     Prot = np.exp(thetaGP[3])
-    if (Prot/4. > (bjd.max()-bjd.min())/1e2) or (np.arange(bjd.min(), bjd.max(), Prot/4.).size > Nmcmc_pnts):
+    # bin the light curve
+    if (Prot/4. > (bjd.max()-bjd.min())/1e2) or \
+       (np.arange(bjd.min(), bjd.max(), Prot/4.).size > Nmcmc_pnts):
         dt = (bjd.max()-bjd.min())/Nmcmc_pnts 
     else: 
         dt = Prot/4.
