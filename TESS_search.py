@@ -181,6 +181,21 @@ def save_fits(arr, fname):
     hdu.writeto(fname, clobber=True)
 
 
+def _optimize_GP(thetaGP, x, res, ey):
+    '''Optimize the GP parameters of a mean-subtracted time-series and return the 
+    mean GP model.'''
+    assert len(thetaGP) == 4
+    a, l, G, Pgp = np.exp(thetaGP)
+    k1 = george.kernels.ExpSquaredKernel(l)
+    k2 = george.kernels.ExpSine2Kernel(G,Pgp)
+    gp = george.GP(a*(k1+k2))
+    results = gp.optimize(x, res, ey)
+    gp.compute(x, ey)
+    mu, cov = gp.predict(res, x)
+    sig = np.sqrt(np.diag(cov))
+    return gp, mu, sig
+
+
 def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Npnts=5e2):
     '''Search for periodic transit-like events.'''
     # "detrend" the lc
@@ -192,7 +207,8 @@ def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Npnts=5e2):
     else: 
 	dt = Prot/4.
     tbin, fbin, efbin = boxcar(bjd, f, ef, dt=dt, include_edges=True)
-    _, mubin, sigbin = mcmc0.get_model0(thetaGP, tbin, fbin, efbin)
+    #_, mubin, sigbin = mcmc0.get_model0(thetaGP, tbin, fbin, efbin)
+    _, mubin, sigbin = _optimize_GP(thetaGP, tbin, fbin, efbin)
     fintmu, fintsig = interp1d(tbin, mubin), interp1d(tbin, sigbin)
     mu, sig = fintmu(bjd), fintsig(bjd)
     fcorr = f - mu + 1
