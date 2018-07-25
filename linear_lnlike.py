@@ -155,14 +155,14 @@ def find_transit_parameters(bjd, fcorr, ef,
 		    	phase[phase > .5] -= 1
 		    	intransit = (phase*Ps_full[-1] <= .5*durations_full[-1]) & \
 				    (phase*Ps_full[-1] >= -.5*durations_full[-1])
-                        depths_full = np.append(depths_full, 1-np.median(fcorr[intransit]))
+                        depths_full = np.append(depths_full, 1-np.median(fcorr[intransit]))  # could be negative
 			theta = Ps_full[-1], T0s_full[-1], depths_full[-1], durations_full[-1]
 			fmodel = box_transit_model(theta, bjd)
 			lnLs_full = np.append(lnLs_full, lnlike(bjd, fcorr, ef, fmodel))
 			##plt.plot(phase, fcorr, '-'), plt.plot(phase[intransit], fcorr[intransit], 'o'), plt.show()
 
-    # trim
-    g = (Ps_full >= .49) & (Ps_full <= (bjd.max()-bjd.min())/3.)
+    # trim (must be greater than ~.5 and smaller than the baseline)
+    g = (Ps_full >= .49) & (Ps_full <= (bjd.max()-bjd.min()))
 
     return Ps_full[g], T0s_full[g], durations_full[g], depths_full[g], lnLs_full[g]
 
