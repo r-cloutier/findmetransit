@@ -93,7 +93,7 @@ def do_optimize_0(bjd, f, ef, fname, N=10, Npnts=5e2):
             dt = Prot/4.
         tbin, fbin, efbin = boxcar(bjd,f,ef,dt=dt)
         gp,mu,sig,thetaGPs_out[i] = fit_GP_0(thetaGPs_in[i],
-                                             tbin, fbin, efbin, bjd)
+                                             tbin, fbin, efbin)
         # compute residuals and the normality test p-value
         _,pvalues[i] = normaltest(fbin-mu)
     # select the most gaussian-like residuals
@@ -107,14 +107,15 @@ def do_optimize_0(bjd, f, ef, fname, N=10, Npnts=5e2):
     return thetaGPin.reshape(4), thetaGPout.reshape(4)
 
 
-def fit_GP_0(thetaGP, tbin, fbin, efbin, bjd):
+def fit_GP_0(thetaGP, tbin, fbin, efbin):
     '''optimize the hyperparameters of this quasi-periodic GP'''
     assert len(thetaGP) == 4
     a, l, G, Pgp = np.exp(thetaGP)
     k1 = george.kernels.ExpSquaredKernel(l)
     k2 = george.kernels.ExpSine2Kernel(G,Pgp)
     gp = george.GP(a*(k1+k2))
-    results = gp.optimize(tbin, fbin, efbin)
+    bnds = ((-np.inf,np.inf),(-np.inf,np.inf),(-5,5),(-10,10))
+    results = gp.optimize(tbin, fbin, efbin, **{'bounds':bnds})
     try:
         gp.compute(tbin, efbin)
     except (ValueError, np.linalg.LinAlgError):
@@ -201,8 +202,7 @@ def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Npnts=5e2):
     # "detrend" the lc
     assert len(thetaGP) == 4
     Prot = np.exp(thetaGP[3])
-    if (Prot/4. > (bjd.max()-bjd.min())/1e2) or \
-       (np.arange(bjd.min(), bjd.max(), Prot/4.).size > Npnts):
+    if (Prot/4. > (bjd.max()-bjd.min())/1e2) or (np.arange(bjd.min(), bjd.max(), Prot/4.).size > Npnts):
     	dt = (bjd.max()-bjd.min())/Npnts
     else: 
 	dt = Prot/4.
