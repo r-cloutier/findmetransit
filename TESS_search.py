@@ -192,11 +192,11 @@ def _optimize_GP(thetaGP, x, res, ey):
     gp = george.GP(a*(k1+k2))
     try:
 	results = gp.optimize(x, res, ey)
+    	gp.compute(x, ey)
+    	mu, cov = gp.predict(res, x)
+    	sig = np.sqrt(np.diag(cov))
     except (ValueError, np.linalg.LinAlgError):
-	return None, np.zeros(x.size), np.zeros(x.size)
-    gp.compute(x, ey)
-    mu, cov = gp.predict(res, x)
-    sig = np.sqrt(np.diag(cov))
+	gp, mu, sig = None, np.zeros(x.size), np.zeros(x.size)
     return gp, mu, sig
 
 
