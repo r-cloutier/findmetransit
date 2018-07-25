@@ -190,7 +190,10 @@ def _optimize_GP(thetaGP, x, res, ey):
     k1 = george.kernels.ExpSquaredKernel(l)
     k2 = george.kernels.ExpSine2Kernel(G,Pgp)
     gp = george.GP(a*(k1+k2))
-    results = gp.optimize(x, res, ey)
+    try:
+	results = gp.optimize(x, res, ey)
+    except (ValueError, np.linalg.LinAlgError):
+	return None, np.zeros(x.size), np.zeros(x.size)
     gp.compute(x, ey)
     mu, cov = gp.predict(res, x)
     sig = np.sqrt(np.diag(cov))
