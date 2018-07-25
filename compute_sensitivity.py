@@ -358,6 +358,18 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
 	plt.show()
 
 
+def do_i_run(fname):
+    if os.path.exists(fname):
+	self = loadpickle('%s/Sensitivity_class'%fname)
+	try:
+	    _ = getattr(self, 'is_detected')
+	    return False
+	except AttributeError:
+	    return True
+    else:
+	return True
+
+
 if __name__ == '__main__':
     # create light curve for this planet
     fnum = int(sys.argv[1])
@@ -376,7 +388,8 @@ if __name__ == '__main__':
     Nstars_per_star = 20
     for i in range(Nstars_per_star):
         fname = 'TOIsensitivity27_%.5d_%.3d'%(fnum,i)
-        g = np.random.randint(0,Tmag.size)  # get random star from the candidate target list
-        rpRs = rvs.Rearth2m(rp) / rvs.Rsun2m(Rs[g])
-        compute_sensitivity(fname, [P], [rpRs], Tmag[g], Rs[g], Ms[g], Teff[g],
-                            Ndays_field=Ndays_field)
+	if do_i_run('Results/%s'%fname):
+            g = np.random.randint(0,Tmag.size)  # get random star from the candidate target list
+            rpRs = rvs.Rearth2m(rp) / rvs.Rsun2m(Rs[g])
+            compute_sensitivity(fname, [P], [rpRs], Tmag[g], Rs[g], Ms[g], Teff[g],
+                            	Ndays_field=Ndays_field)
