@@ -292,7 +292,7 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
     #samplerGP, samplesGP, resultsGP = do_mcmc_0(sens, bjd, f, ef, fname_short)
     #sens.samplesGP = samplesGP
     #sens.resultsGP = resultsGP
-    thetaGPin, thetaGPout = do_optimize_0(bjd, f, ef, fname_short)
+    sens.thetaGPall, sens.resultsGPall, thetaGPin, thetaGPout = do_optimize_0(bjd, f, ef, fname_short)
     sens.thetaGP, sens.resultsGP = thetaGPin, thetaGPout
     sens.pickleobject()
 
