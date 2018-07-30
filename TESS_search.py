@@ -233,7 +233,6 @@ def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Npnts=5e2):
                                                              transit_times,
                                                              durations, lnLs,
                                                              depths, SNRthresh)
-    sens.params_guess = (Ps, T0s, Ds, Zs, lnLs_transit)
 
     print 'Finding transit-like events and making transit parameter guesses...\n'
     Rs = hdr['RADIUS']

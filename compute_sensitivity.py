@@ -284,6 +284,7 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
     # save true parameters for cross-checking
     sens.Tmag, sens.Rs, sens.Ms, sens.Teff = Tmag, Rs, Ms, Teff
     sens.params_true = params
+    sens.params_true_labels = np.array(['Ps', 'T0s', 'rp_Rss', 'a_Rss', 'inc_degs'])
     sens.EBr1, sens.EBr2, sens.EBsbratio, sens.EBinc, sens.EBT0, sens.EBP, sens.EBq = EBparams
     sens.pickleobject()
 
@@ -300,6 +301,7 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
     print 'Searching for transit-like events...\n'
     params, EBparams = find_transits(sens, bjd, f, ef, thetaGPout, hdr, fname_short)
     sens.params_guess = params
+    sens.params_guess_labels = np.array(['Ps', 'T0s', 'depths [Z]', 'durations ['D']])
     sens.pickleobject()
 
     # is the planet detected?
