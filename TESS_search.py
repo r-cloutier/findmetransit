@@ -73,7 +73,7 @@ def initialize_GP_hyperparameters(bjd, f, ef, Pindex=0):
     return lna, lnl, lnG, lnP#, s
 
 
-def do_optimize_0(bjd, f, ef, fname, N=10, Npnts=5e2):
+def do_optimize_0(bjd, f, ef, fname, N=10, Npnts=5e2, Nsig=3):
     '''First fit the PDC LC with GP and a no planet model using an optimization 
     routine and tested with N different initializations.'''
     # test various hyperparameter initializations and keep the one resulting
@@ -91,7 +91,9 @@ def do_optimize_0(bjd, f, ef, fname, N=10, Npnts=5e2):
             dt = (bjd.max()-bjd.min())/Npnts 
         else: 
             dt = Prot/4.
-        tbin, fbin, efbin = boxcar(bjd,f,ef,dt=dt)
+	# trim outliers to avoid fitting deep transits
+ 	g = abs(f-np.median(f)) <= Nsig*f.std()
+        tbin, fbin, efbin = boxcar(bjd[g], f[g], ef[g], dt=dt)
         gp,mu,sig,thetaGPs_out[i] = fit_GP_0(thetaGPs_in[i],
                                              tbin, fbin, efbin)
         # compute residuals and the normality test p-value
