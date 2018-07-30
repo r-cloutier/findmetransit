@@ -279,11 +279,13 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
     fname_short = fname.replace('.fits','')
     sens = Sensitivity(fname_short)
     sens.bjd, sens.f, sens.ef = bjd, f, ef
+    sens.pickleobject()
 
     # save true parameters for cross-checking
     sens.Tmag, sens.Rs, sens.Ms, sens.Teff = Tmag, Rs, Ms, Teff
     sens.params_true = params
     sens.EBr1, sens.EBr2, sens.EBsbratio, sens.EBinc, sens.EBT0, sens.EBP, sens.EBq = EBparams
+    sens.pickleobject()
 
     # fit systematics with a GP
     print 'Fitting LC with GP alone...\n'
@@ -292,16 +294,18 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
     #sens.resultsGP = resultsGP
     thetaGPin, thetaGPout = do_optimize_0(bjd, f, ef, fname_short)
     sens.thetaGP, sens.resultsGP = thetaGPin, thetaGPout
+    sens.pickleobject()
 
     # search for transits in the corrected LC and get the transit parameters guesses
     print 'Searching for transit-like events...\n'
     params, EBparams = find_transits(sens, bjd, f, ef, thetaGPout, hdr, fname_short)
     sens.params_guess = params
+    sens.pickleobject()
 
     # is the planet detected?
     detected = True if np.any(np.isclose(params[:,0], Ps[0], atol=Ps[0]*.02)) else False
     sens.is_detected = np.array([detected]).astype(int)
-
+    sens.pickleobject()
 
 
 def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):

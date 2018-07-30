@@ -104,7 +104,7 @@ def do_optimize_0(bjd, f, ef, fname, N=10, Npnts=5e2):
     else:
         thetaGPin = thetaGPs_in[0]
         thetaGPout = thetaGPs_out[0]
-    return thetaGPin.reshape(4), thetaGPout.reshape(4)
+    return thetaGPs_in, thetaGPs_out, thetaGPin.reshape(4), thetaGPout.reshape(4)
 
 
 def fit_GP_0(thetaGP, tbin, fbin, efbin):
@@ -192,12 +192,13 @@ def _optimize_GP(thetaGP, x, res, ey):
     gp = george.GP(a*(k1+k2))
     try:
 	results = gp.optimize(x, res, ey)
+	results = results[0]
     	gp.compute(x, ey)
     	mu, cov = gp.predict(res, x)
     	sig = np.sqrt(np.diag(cov))
     except (ValueError, np.linalg.LinAlgError):
-	gp, mu, sig = None, np.zeros(x.size), np.zeros(x.size)
-    return gp, mu, sig
+	gp, results, mu, sig = None, np.zeros(len(thetaGP)), np.zeros(x.size), np.zeros(x.size)
+    return gp, results, mu, sig
 
 
 def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Npnts=5e2):
@@ -211,12 +212,13 @@ def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Npnts=5e2):
 	dt = Prot/4.
     tbin, fbin, efbin = boxcar(bjd, f, ef, dt=dt, include_edges=True)
     #_, mubin, sigbin = mcmc0.get_model0(thetaGP, tbin, fbin, efbin)
-    _, mubin, sigbin = _optimize_GP(thetaGP, tbin, fbin, efbin)
+    _, resultsGP, mubin, sigbin = _optimize_GP(thetaGP, tbin, fbin, efbin)
     fintmu, fintsig = interp1d(tbin, mubin), interp1d(tbin, sigbin)
     mu, sig = fintmu(bjd), fintsig(bjd)
     fcorr = f - mu + 1
     sens.bjd, sens.f, sens.ef = bjd, f, ef
     sens.mu, sens.sig, sens.fcorr = mu, sig, fcorr
+    sens.resultsGP_detrend = resultsGP
 
     # do linear search first
     print 'Computing lnL over transit times and durations...\n'
