@@ -258,7 +258,7 @@ def remove_multiples(bjd, Ps, T0s, Ds, Zs, lnLs, dP=.1):
     return Ps_final, T0s_final, Ds_final, Zs_final, lnLs_final
 
 
-def identify_transit_candidates(Ps, T0s, Ds, Zs, lnLs, Ndurations,
+def identify_transit_candidates(Ps, T0s, Ds, Zs, lnLs, Ndurations, Rs,
                                 bjd, fcorr, ef):
     '''Given the transit parameters and their lnLs, identify transit 
     candidates.'''
@@ -314,7 +314,7 @@ def identify_transit_candidates(Ps, T0s, Ds, Zs, lnLs, Ndurations,
     params = np.array([p,t0,z,d]).T
 
     # try to identify EBs
-    params, EBparams = identify_EBs(params, bjd, fcorr, ef)
+    params, EBparams = identify_EBs(params, bjd, fcorr, ef, Rs)
 
     return POIs_final, T0OIs_final, DOIs_final, ZOIs_final, lnLOIs_final, \
         params, EBparams
@@ -370,7 +370,7 @@ def confirm_transits(params, bjd, fcorr, ef):
     return paramsout
 
 
-def identify_EBs(params, bjd, fcorr, ef, SNRthresh=3.):
+def identify_EBs(params, bjd, fcorr, ef, Rs, SNRthresh=3., rpmax=30):
     '''For each proposed planet in params, check if there is a clearly-defined 
     secondary eclipse as is indicative of a secondary eclipse. Could also have a 
     V-shaped "transit" but so highly inclined transiting planets.'''
@@ -390,6 +390,11 @@ def identify_EBs(params, bjd, fcorr, ef, SNRthresh=3.):
         rms_outeclipse2 = fcorr[outeclipse2].std()
         if (rms_ineclipse1 >= SNRthresh*rms_outeclipse1) or (rms_ineclipse2 >= SNRthresh*rms_outeclipse2):
             notEB[i] = 0.
+
+    # check that planets are not too big
+    rpRss = params[:,2]
+    rps = rvs.m2Rearth(rvs.Rsun2m(rpRss*Rs))
+    notEB[rps > rpmax] = 0
 
     # save planet and EB parameters
     notEB = notEB.astype(bool)
