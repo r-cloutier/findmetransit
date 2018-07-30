@@ -285,6 +285,7 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
     sens.Tmag, sens.Rs, sens.Ms, sens.Teff = Tmag, Rs, Ms, Teff
     sens.params_true = params
     sens.params_true_labels = np.array(['Ps', 'T0s', 'rp_Rss', 'a_Rss', 'inc_degs'])
+    sens.rps = rvs.m2Rearth(rvs.Rsun2m(sens.params_true[:,2]*sens.Rs))
     sens.EBr1, sens.EBr2, sens.EBsbratio, sens.EBinc, sens.EBT0, sens.EBP, sens.EBq = EBparams
     sens.pickleobject()
 
