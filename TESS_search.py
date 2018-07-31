@@ -219,6 +219,7 @@ def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Npnts=5e2, medkernel=99
     # trim outliers and median filter to avoid fitting deep transits
     g = abs(f-np.median(f)) <= Nsig*f.std()
     tbin, fbin, efbin = boxcar(bjd[g], medfilt(f[g],medkernel), ef[g], dt=dt, include_edges=True)
+    sens.tbin, sens.fbin, sens.efbin = tbin, fbin, efbin
     #_, mubin, sigbin = mcmc0.get_model0(thetaGP, tbin, fbin, efbin)
     _, resultsGP, mubin, sigbin = _optimize_GP(thetaGP, tbin, fbin, efbin)
     fintmu, fintsig = interp1d(tbin, mubin), interp1d(tbin, sigbin)
