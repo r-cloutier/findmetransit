@@ -6,6 +6,7 @@ import linear_lnlike as llnl
 import rvs
 from sensitivity_class import Sensitivity
 from scipy.stats import normaltest
+from scipy.signal import medfilt
 
 global SNRthresh
 SNRthresh = 5
@@ -73,7 +74,7 @@ def initialize_GP_hyperparameters(bjd, f, ef, Pindex=0):
     return lna, lnl, lnG, lnP#, s
 
 
-def do_optimize_0(bjd, f, ef, fname, N=10, Npnts=5e2, Nsig=3):
+def do_optimize_0(bjd, f, ef, N=10, Npnts=5e2, Nsig=3, medkernel=99):
     '''First fit the PDC LC with GP and a no planet model using an optimization 
     routine and tested with N different initializations.'''
     # test various hyperparameter initializations and keep the one resulting
@@ -91,9 +92,9 @@ def do_optimize_0(bjd, f, ef, fname, N=10, Npnts=5e2, Nsig=3):
             dt = (bjd.max()-bjd.min())/Npnts 
         else: 
             dt = Prot/4.
-	# trim outliers to avoid fitting deep transits
+	# trim outliers and median filter to avoid fitting deep transits
  	g = abs(f-np.median(f)) <= Nsig*f.std()
-        tbin, fbin, efbin = boxcar(bjd[g], f[g], ef[g], dt=dt)
+        tbin, fbin, efbin = boxcar(bjd[g], medfilt(f[g],medkernel), ef[g], dt=dt)
         gp,mu,sig,thetaGPs_out[i] = fit_GP_0(thetaGPs_in[i],
                                              tbin, fbin, efbin)
         # compute residuals and the normality test p-value
@@ -103,9 +104,12 @@ def do_optimize_0(bjd, f, ef, fname, N=10, Npnts=5e2, Nsig=3):
     if g.sum() == 1:
         thetaGPin = thetaGPs_in[g]
         thetaGPout = thetaGPs_out[g]
-    else:
+    elif g.sum() == 0:
         thetaGPin = thetaGPs_in[0]
         thetaGPout = thetaGPs_out[0]
+    else:
+	thetaGPin = thetaGPs_in[g][0]
+        thetaGPout = thetaGPs_out[g][0]
     return thetaGPs_in, thetaGPs_out, thetaGPin.reshape(4), thetaGPout.reshape(4)
 
 
