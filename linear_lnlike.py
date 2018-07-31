@@ -357,8 +357,9 @@ def confirm_transits(params, bjd, fcorr, ef):
 	cond1 = np.median(fcorr[intransit]) <= np.median(fcorr[outtransit]) - dispersion_sig*MAD1d(fcorr[outtransit])
 	# also check that the transit depth is significant relative to the noise
 	sigdepth = np.median(ef)
-  	cond2 = (1-np.median(fcorr[intransit]) <= depth+depth_sig*sigdepth) & \
-	   	(1-np.median(fcorr[intransit]) >= depth-depth_sig*sigdepth)
+	cond2 = depth/sigdepth > depth_sig
+  	#cond2 = (1-np.median(fcorr[intransit]) <= depth+depth_sig*sigdepth) & \
+	#   	(1-np.median(fcorr[intransit]) >= depth-depth_sig*sigdepth)
 	if cond1 and cond2:
 	    pass
 	else:

@@ -60,8 +60,10 @@ def get_timeseries(mag, Teff, Rs, Ms, Ps, rpRss, add_systematic=True,
 	fint = interp1d(tbin, gp.sample(tbin))
 	fact = fint(bjd)
 	fact -= np.median(fact)
-	f = fcorr + fact * (a/fact.max())
+	fact *= a/fact.max()
+	f = fcorr + fact
     else:
+	fact = np.zeros(f.size)
 	f = fcorr
     
     # update stellar info
@@ -69,7 +71,7 @@ def get_timeseries(mag, Teff, Rs, Ms, Ps, rpRss, add_systematic=True,
     logg = np.log10(6.67e-11*rvs.Msun2kg(Ms)*1e2 / rvs.Rsun2m(Rs)**2)
     hdr['LOGG'] = logg
 
-    return hdr, bjd, f, ef, fcorr, params, EBparams
+    return hdr, bjd, f, ef, fact, fcorr, params, EBparams
 
 
 def get_planet_model(bjd, Ps, rpRss, Rs, N=1e2):
@@ -272,13 +274,13 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
 			add_systematic=True, Ndays_field=27):
     # create timeseries and save
     assert len(Ps) == len(rpRss)
-    hdr, bjd, f, ef, fcorr, params, EBparams = get_timeseries(Tmag, Teff, Rs,
-                                                              Ms, Ps, rpRss,
-					            	      add_systematic, 
-						      	      Ndays_field)
+    hdr, bjd, f, ef, fact, fcorr, params, EBparams = get_timeseries(Tmag, Teff, Rs,
+                                                              	    Ms, Ps, rpRss,
+					            	      	    add_systematic, 
+						      	      	    Ndays_field)
     fname_short = fname.replace('.fits','')
     sens = Sensitivity(fname_short)
-    sens.bjd, sens.f, sens.ef = bjd, f, ef
+    sens.bjd, sens.f, sens.ef, sens.fact = bjd, f, ef, fact
     sens.pickleobject()
 
     # save true parameters for cross-checking
@@ -302,7 +304,7 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
     print 'Searching for transit-like events...\n'
     params, EBparams = find_transits(sens, bjd, f, ef, thetaGPout, hdr, fname_short)
     sens.params_guess = params
-    sens.params_guess_labels = np.array(['Ps', 'T0s', 'depths [Z]', 'durations ['D']])
+    sens.params_guess_labels = np.array(['Ps', 'T0s', 'depths [Z]', 'durations [D]'])
     sens.pickleobject()
 
     # is the planet detected?
