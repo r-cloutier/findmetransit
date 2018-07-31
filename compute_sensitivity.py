@@ -71,7 +71,7 @@ def get_timeseries(mag, Teff, Rs, Ms, Ps, rpRss, add_systematic=True,
     inds = np.arange(bjd.size, dtype=int)
     np.random.shuffle(inds)
     fjumps = np.zeros(bjd.size)
-    fjumps[inds[:Njumps]] = np.random.uniform(1.2,4,Njumps)*rms
+    fjumps[inds[:Njumps]] = np.random.uniform(3,8,Njumps)*rms
     f += fjumps
 
     # update stellar info
