@@ -207,7 +207,7 @@ def _optimize_GP(thetaGP, x, res, ey):
     return gp, results, mu, sig
 
 
-def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Npnts=5e2):
+def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Npnts=5e2, medkernel=99):
     '''Search for periodic transit-like events.'''
     # "detrend" the lc
     assert len(thetaGP) == 4
@@ -216,7 +216,9 @@ def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Npnts=5e2):
     	dt = (bjd.max()-bjd.min())/Npnts
     else: 
 	dt = Prot/4.
-    tbin, fbin, efbin = boxcar(bjd, f, ef, dt=dt, include_edges=True)
+    # trim outliers and median filter to avoid fitting deep transits
+    g = abs(f-np.median(f)) <= Nsig*f.std()
+    tbin, fbin, efbin = boxcar(bjd[g], medfilt(f[g],medkernel), ef[g], dt=dt, include_edges=True)
     #_, mubin, sigbin = mcmc0.get_model0(thetaGP, tbin, fbin, efbin)
     _, resultsGP, mubin, sigbin = _optimize_GP(thetaGP, tbin, fbin, efbin)
     fintmu, fintsig = interp1d(tbin, mubin), interp1d(tbin, sigbin)
