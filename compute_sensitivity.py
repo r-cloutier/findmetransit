@@ -66,12 +66,20 @@ def get_timeseries(mag, Teff, Rs, Ms, Ps, rpRss, add_systematic=True,
 	fact = np.zeros(f.size)
 	f = fcorr
     
+    # add stochastic jumps in flux (CRs?)
+    Njumps = int(np.floor(np.random.exponential(2.5)))
+    inds = np.arange(bjd.size, dtype=int)
+    np.random.shuffle(inds)
+    fjumps = np.zeros(bjd.size)
+    fjumps[inds[:Njumps]] = np.random.uniform(1.2,4,Njumps)*rms
+    f += fjumps
+
     # update stellar info
     hdr['TESSMAG'], hdr['TEFF'], hdr['RADIUS'] = mag, Teff, Rs
     logg = np.log10(6.67e-11*rvs.Msun2kg(Ms)*1e2 / rvs.Rsun2m(Rs)**2)
     hdr['LOGG'] = logg
 
-    return hdr, bjd, f, ef, fact, fcorr, params, EBparams
+    return hdr, bjd, f, ef, fact, fjumps, fcorr, params, EBparams
 
 
 def get_planet_model(bjd, Ps, rpRss, Rs, N=1e2):
@@ -274,13 +282,12 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
 			add_systematic=True, Ndays_field=27):
     # create timeseries and save
     assert len(Ps) == len(rpRss)
-    hdr, bjd, f, ef, fact, fcorr, params, EBparams = get_timeseries(Tmag, Teff, Rs,
-                                                              	    Ms, Ps, rpRss,
-					            	      	    add_systematic, 
-						      	      	    Ndays_field)
+    hdr, bjd, f, ef, fact, fjumps, fcorr, params, EBparams = \
+                                get_timeseries(Tmag, Teff, Rs, Ms, Ps, rpRss,
+                                               add_systematic, Ndays_field)
     fname_short = fname.replace('.fits','')
     sens = Sensitivity(fname_short)
-    sens.bjd, sens.f, sens.ef, sens.fact = bjd, f, ef, fact
+    sens.bjd, sens.f, sens.ef, sens.fact, sens.fjumps = bjd, f, ef, fact, fjumps
     sens.pickleobject()
 
     # save true parameters for cross-checking
