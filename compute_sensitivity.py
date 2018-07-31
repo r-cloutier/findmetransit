@@ -319,6 +319,13 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
     sens.is_detected = np.array([detected]).astype(int)
     sens.pickleobject()
 
+    # do joint GP+transit model
+    params, resultsGPfin, mufin, sigfin = joint_LC_fit(params, thetaGPout, bjd, f, ef)
+    sens.params_guessfin = params
+    sens.resultsGPfin = resultsfin
+    sens.mufin, sens.sigfin = mufin, sigfin
+    sens.pickleobject()
+
 
 def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
     '''Get the completeness as a function of P & rp/Rs for a set of sensitivity
