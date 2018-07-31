@@ -356,7 +356,7 @@ def confirm_transits(params, bjd, fcorr, ef):
         # check scatter in and out of the proposed transit to see if the transit is real
 	cond1 = np.median(fcorr[intransit]) <= np.median(fcorr[outtransit]) - dispersion_sig*MAD1d(fcorr[outtransit])
 	# also check that the transit depth is significant relative to the noise
-	sigdepth = np.median(ef)
+	sigdepth = np.median(ef[intransit])
 	cond2 = depth/sigdepth > depth_sig
   	#cond2 = (1-np.median(fcorr[intransit]) <= depth+depth_sig*sigdepth) & \
 	#   	(1-np.median(fcorr[intransit]) >= depth-depth_sig*sigdepth)
