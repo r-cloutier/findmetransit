@@ -238,7 +238,7 @@ def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Npnts=5e2):
 
     print 'Finding transit-like events and making transit parameter guesses...\n'
     Rs = hdr['RADIUS']
-    POIs, T0OIs, DOIs, ZOIs, lnLOIs, params, EBparams = llnl.identify_transit_candidates(Ps, T0s, Ds, Zs, 
+    POIs, T0OIs, DOIs, ZOIs, lnLOIs, params, EBparams = llnl.identify_transit_candidates(sens, Ps, T0s, Ds, Zs, 
 									       		 lnLs_transit, 
 											 durations.size, Rs,
 									       		 bjd, fcorr, ef)

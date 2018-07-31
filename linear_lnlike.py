@@ -3,7 +3,7 @@ from scipy.optimize import curve_fit
 import rvs, mcmc1
 
 global dispersion_sig, depth_sig
-dispersion_sig, depth_sig = 1.5, 1
+dispersion_sig, depth_sig = 1.5, 1.5
 
 def lnlike(bjd, f, ef, fmodel):
     return -.5*(np.sum((f-fmodel)**2 / ef**2 - np.log(1./ef**2)))
@@ -258,7 +258,7 @@ def remove_multiples(bjd, Ps, T0s, Ds, Zs, lnLs, dP=.1):
     return Ps_final, T0s_final, Ds_final, Zs_final, lnLs_final
 
 
-def identify_transit_candidates(Ps, T0s, Ds, Zs, lnLs, Ndurations, Rs,
+def identify_transit_candidates(sens, Ps, T0s, Ds, Zs, lnLs, Ndurations, Rs,
                                 bjd, fcorr, ef):
     '''Given the transit parameters and their lnLs, identify transit 
     candidates.'''
@@ -306,7 +306,10 @@ def identify_transit_candidates(Ps, T0s, Ds, Zs, lnLs, Ndurations, Rs,
     params = params[np.unique(params[:,0], return_index=True)[1]]
 
     # identify bona-fide transit-like events
-    params = confirm_transits(params, bjd, fcorr, ef)
+    sens.params_guess_priorto_confirm = params
+    params, cond1, cond2 = confirm_transits(params, bjd, fcorr, ef)
+    sens.transit_condition_scatterin_gtr_scatterout = cond1
+    sens.transit_condition_depth_gtr_rms = cond2
 
     # re-remove multiple transits based on refined parameters
     p,t0,d,z,_ = remove_multiples(bjd, params[:,0], params[:,1], params[:,3], 
@@ -332,6 +335,8 @@ def confirm_transits(params, bjd, fcorr, ef):
     dimming is seen.'''
     Ntransits = params.shape[0]
     paramsout, to_remove_inds = np.zeros((Ntransits,4)), np.zeros(0)
+    transit_condition_scatterin_gtr_scatterout = np.zeros(Ntransits, dtype=bool)
+    transit_condition_depth_gtr_rms = np.zeros(Ntransits, dtype=bool)
     print 'Confirming proposed transits...'
     for i in range(Ntransits):
 	print float(i) / Ntransits
@@ -355,11 +360,14 @@ def confirm_transits(params, bjd, fcorr, ef):
 
         # check scatter in and out of the proposed transit to see if the transit is real
 	cond1 = np.median(fcorr[intransit]) <= np.median(fcorr[outtransit]) - dispersion_sig*MAD1d(fcorr[outtransit])
+	transit_condition_scatterin_gtr_scatterout[i] = cond1
 	# also check that the transit depth is significant relative to the noise
+	depth = 1-np.median(fcorr[intransit])
 	sigdepth = np.median(ef[intransit])
 	cond2 = depth/sigdepth > depth_sig
   	#cond2 = (1-np.median(fcorr[intransit]) <= depth+depth_sig*sigdepth) & \
 	#   	(1-np.median(fcorr[intransit]) >= depth-depth_sig*sigdepth)
+	transit_condition_depth_gtr_rms[i] = cond2
 	if cond1 and cond2:
 	    pass
 	else:
@@ -368,7 +376,7 @@ def confirm_transits(params, bjd, fcorr, ef):
     # remove false transits
     paramsout = np.delete(paramsout, to_remove_inds, 0)
 
-    return paramsout
+    return paramsout, transit_condition_scatterin_gtr_scatterout, transit_condition_depth_gtr_rms
 
 
 def identify_EBs(params, bjd, fcorr, ef, Rs, SNRthresh=3., rpmax=30):
