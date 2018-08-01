@@ -49,14 +49,15 @@ def joint_LC_fit(sens, Nsig=3, medkernel=49):
     '''Iteratively optimize the planetary and GP model parameters'''
     # get fixed LD coefficients for this star
     u1, u2 = get_LDcoeffs(sens.Teff, sens.Ms, sens.Rs)
-    
+    lds = {'u1':u1, 'u2':u2}    
+
     # optimize planets in detrended LC
     Nplanets = sens.params_guess.shape[0]
     transit_model = np.zeros(sens.tbin.size)
     for i in range(Nplanets):
 
         # make initial transit parameter guess
-        P, T0, depth = self.params_guess[i,:3]
+        P, T0, depth = sens.params_guess[i,:3]
         aRs = rvs.AU2m(rvs.semimajoraxis(P,sens.Ms,0)) / rvs.Rsun2m(sens.Rs)
         rpRs = np.sqrt(depth)
         p0 = P, T0, aRs, rpRs, 90.
@@ -101,7 +102,7 @@ def joint_LC_fit(sens, Nsig=3, medkernel=49):
     for i in range(Nplanets):
 
         # make initial transit parameter guess
-        P, T0, depth = self.params_guess[i,:3]
+        P, T0, depth = sens.params_guess[i,:3]
         aRs = rvs.AU2m(rvs.semimajoraxis(P,sens.Ms,0)) / rvs.Rsun2m(sens.Rs)
         rpRs = np.sqrt(depth)
         p0 = P, T0, aRs, rpRs, 90.

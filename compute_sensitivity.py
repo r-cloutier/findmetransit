@@ -289,6 +289,7 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
     fname_short = fname.replace('.fits','')
     sens = Sensitivity(fname_short)
     sens.bjd, sens.f, sens.ef, sens.fact, sens.fjumps = bjd, f, ef, fact, fjumps
+    sens.DONE = False
     sens.pickleobject()
 
     # save true parameters for cross-checking
@@ -327,7 +328,9 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
 	sens.transit_params = transit_params
     	sens.resultsGPfin = resultsGPfin
     	sens.mufin, sens.sigfin = mufin, sigfin
-    	sens.pickleobject()
+    	
+    sens.DONE = True
+    sens.pickleobject()
 
 
 def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
