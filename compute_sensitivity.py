@@ -400,8 +400,8 @@ def add_planets(Nplanets, Ps, rps, Ms):
     	unstable, ind = True, 0
     	while unstable and ind < 100:
 	    # sample additional planets
-	    Ps = np.append(Ps, 10**np.random.uniform(np.log10(.5), np.log10(351), Nplanets-1))
-	    rps = np.append(rps, 10**np.random.uniform(np.log10(.5), np.log10(15), Nplanets-1))
+	    Ps = np.append(Ps[0], 10**np.random.uniform(np.log10(.5), np.log10(351), Nplanets-1))
+	    rps = np.append(rps[0], 10**np.random.uniform(np.log10(.5), np.log10(15), Nplanets-1))
 	    sort = np.argsort(Ps)
 	    Ps, rps = Ps[sort], rps[sort]
 
@@ -410,6 +410,8 @@ def add_planets(Nplanets, Ps, rps, Ms):
 	    smas = rvs.AU2m(rvs.semimajoraxis(Ps, Ms, 0))
 	    Fs = Ls / (4*np.pi*smas**2) / 1367.
     	    mps = radF2mass(rps, Fs)
+	    assert Ps.size == Nplanets
+            assert mps.size == Nplanets
 	    unstable = False if np.all(rvs.is_Lagrangestable(Ps, Ms, mps, np.zeros(Nplanets)).astype(bool)) else True
 	    ind += 1
 	return Ps, rps
