@@ -97,7 +97,7 @@ def joint_LC_fit(sens, Nsig=3, medkernel=49):
                           interp1d(sens.tbin, sigbin)
         mu, sig = fintmu(sens.bjd), fintsig(sens.bjd)
     except (ValueError, np.linalg.LinAlgError):
-        resultsGP, mu, sig = np.zeros(len(thetaGP)), np.zeros(sens.bjd.size), \
+        resultsGP, mu, sig = np.zeros(len(sens.resultsGP)), np.zeros(sens.bjd.size), \
                              np.zeros(sens.bjd.size)
 
     # optimize planets again on the newly detrended LC
