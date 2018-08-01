@@ -2,6 +2,7 @@ from TESS_search import *
 import matplotlib.gridspec as gridspec
 import linear_lnlike as llnl
 import batman, ellc
+from massradius import radF2mass
 from truncate_cmap import *
 from sensitivity_class import *
 from joint_LCmodel import *
@@ -388,6 +389,39 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
 	plt.show()
 
 
+def add_planets(Nplanets, Ps, rps, Ms):
+    '''add additional planet to be transiting and ensure dynamical stability.'''
+    assert Ps.size == 1
+    assert rps.size == 1
+
+    Nplanets = int(Nplanets)
+    if Nplanets > 1:
+        # ensure stability is multiple planets
+    	unstable, ind = True, 0
+    	while unstable and ind < 100:
+	    # sample additional planets
+	    Ps = np.append(Ps, 10**np.random.uniform(np.log10(.5), np.log10(351), Nplanets-1))
+	    rps = np.append(rps, 10**np.random.uniform(np.log10(.5), np.log10(15), Nplanets-1))
+	    sort = np.argsort(Ps)
+	    Ps, rps = Ps[sort], rps[sort]
+
+	    # check stability
+      	    Ls = .23 * 3.828e26 * Ms**2.3
+	    smas = rvs.AU2m(rvs.semimajoraxis(Ps, Ms, 0))
+	    Fs = Ls / (4*np.pi*smas**2) / 1367.
+    	    mps = radF2mass(rps, Fs)
+	    unstable = False if np.all(rvs.is_Lagrangestable(Ps, Ms, mps, np.zeros(Nplanets)).astype(bool)) else True
+	    ind += 1
+	return Ps, rps
+
+    elif Nplanets == 1:
+	return Ps, rps
+
+    else:
+	raise ValueError('Need at least 1 planet. (Nplanets = %i)'%Nplanets)
+
+
+
 def do_i_run(fname):
     if os.path.exists(fname):
 	self = loadpickle('%s/Sensitivity_class'%fname)
@@ -403,21 +437,31 @@ def do_i_run(fname):
 if __name__ == '__main__':
     # create light curve for this planet
     fnum = int(sys.argv[1])
-    P = float(sys.argv[2])
-    rp = float(sys.argv[3])
-    Ndays_field = float(sys.argv[4])
-    Tmag, Teff, Rs, Ms = np.loadtxt('CTL/CTL_RC.dat', delimiter=',').T
+    Pin = float(sys.argv[2])
+    Pout = float(sys.argv[3])
+    assert Pin < Pout
+    rpin = float(sys.argv[4])
+    rpout = float(sys.argv[5])
+    assert rpin < rpout
+    Ndays_field = float(sys.argv[6])
 
     # cut in Tmag such that the sample contains ~1e4 stars from which we expect to detect 1e4*.01~1e2 planets
     #Tmag_fullsky = np.repeat(Tmag,12)  # Tmag only covers 1/12 of the sky
     #plt.hist(Tmag_fullsky, bins=1000, log=True, histtype='step', cumulative=True), plt.axhline(1e4), plt.show()
+    Tmag, Teff, Rs, Ms = np.loadtxt('CTL/CTL_RC.dat', delimiter=',').T
     g = (Tmag < 11.1) & (Teff<4e3)
     Tmag, Teff, Rs, Ms = Tmag[g], Teff[g], Rs[g], Ms[g]
 
+    # get planet params
+    Nplanets = 1
+    Ps, rps = np.random.uniform(Pin,Pout,1), np.random.uniform(rpin,rpout,1)
+    Ps, rps = add_planets(Nplanets, Ps, rps, Ms)
+
     # for this planet sample
     Nstars_per_star = 20
+    Nplanets = 1
     for i in range(Nstars_per_star):
-        fname = 'TOIsensitivity27_planet%.5d_iteration%.3d'%(fnum,i)
+        fname = 'TOIsensitivity27_mult%i_planet%.5d_iteration%.3d'%(Nplanets,fnum,i)
 	if do_i_run('Results/%s'%fname):
             g = np.random.randint(0,Tmag.size)  # get random star from the candidate target list
             rpRs = rvs.Rearth2m(rp) / rvs.Rsun2m(Rs[g])

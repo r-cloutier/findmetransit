@@ -1,0 +1,9 @@
+#!/bin/csh
+#PBS -l nodes=1:ppn=1
+#PBS -q workq
+#PBS -r n
+#PBS -l walltime=48:00:00
+#PBS -N tess_sens<<fnum>>
+# EVERYTHING ABOVE THIS COMMENT IS NECESSARY, SHOULD ONLY CHANGE nodes,ppn,walltime and my_job_name VALUES
+cd $PBS_O_WORKDIR/TESS_detection
+python compute_sensitivity.py <<fnum>> <<Pin>> <<Pout>> <<rpin>> <<rpout>> <<Ndays>>

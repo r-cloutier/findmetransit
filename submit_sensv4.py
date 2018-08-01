@@ -2,11 +2,10 @@ import numpy as np
 import os
 
 start, num = 0, 0
-NP, Nrps = 15, 6
+NP, Nrps = 11, 8
 Ndays_field = 27.4
-Ps = np.logspace(np.log10(.5), np.log10(Ndays_field), NP)
-#rpRss = np.linspace(.1, .3, NrpRs)
-rps = np.logspace(np.log10(.5), np.log10(15), Nrps)
+Pgrid = np.logspace(np.log10(.5), np.log10(Ndays_field), NP+1)
+rpgrid = np.logspace(np.log10(.5), np.log10(15), Nrps+1)
 
 for i in range(NP):
     for j in range(Nrps):
@@ -16,8 +15,10 @@ for i in range(NP):
 
         g = g.replace('<<fnum>>', '%i'%(start+num))
         num += 1
-        g = g.replace('<<P>>', '%.5f'%Ps[i])
-        g = g.replace('<<rp>>', '%.5f'%rps[j])
+        g = g.replace('<<Pin>>', '%.5f'%Pgrid[i])
+        g = g.replace('<<Pout>>', '%.5f'%Pgrid[i+1])
+        g = g.replace('<<rpin>>', '%.5f'%rpgrid[j])
+        g = g.replace('<<rpout>>', '%.5f'%rpgrid[j+1])
 	g = g.replace('<<Ndays>>', '%.2f'%Ndays_field)
         h = open('jobscript', 'w')
         h.write(g)
