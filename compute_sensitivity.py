@@ -453,7 +453,7 @@ if __name__ == '__main__':
     Tmag, Teff, Rs, Ms = Tmag[g], Teff[g], Rs[g], Ms[g]
 
     # for this planet sample
-    Nplanets, Nstars_per_star = 1, 20
+    Nplanets, Nstars_per_star = 2, 20
     for i in range(Nstars_per_star):
         fname = 'TOIsensitivity27_mult%i_planet%.5d_iteration%.3d'%(Nplanets,fnum,i)
 	if do_i_run('Results/%s'%fname):
