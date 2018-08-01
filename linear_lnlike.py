@@ -401,9 +401,9 @@ def identify_EBs(params, bjd, fcorr, ef, Rs, SNRthresh=3., rpmax=30):
             notEB[i] = 0.
 
     # check that planets are not too big
-    rpRss = params[:,2]
+    rpRss = np.sqrt(params[:,2])
     rps = rvs.m2Rearth(rvs.Rsun2m(rpRss*Rs))
-    notEB[rps > rpmax] = 0
+    notEB[(rpRss > .5) | (rps > rpmax)] = 0
 
     # save planet and EB parameters
     notEB = notEB.astype(bool)
