@@ -57,7 +57,7 @@ def get_timeseries(mag, Teff, Rs, Ms, Ps, rpRss, add_systematic=True,
 	k1 = george.kernels.ExpSquaredKernel(l)
 	k2 = george.kernels.ExpSine2Kernel(G,P)
 	gp = george.GP(k1+k2)
-	tbin, fbin, efbin = boxcar(bjd, fcorr, ef, include_edges=True)
+	tbin, fbin, efbin = boxcar(bjd, fcorr, ef, include_edges=True, tfull=bjd)
 	fint = interp1d(tbin, gp.sample(tbin))
 	fact = fint(bjd)
 	fact -= np.median(fact)

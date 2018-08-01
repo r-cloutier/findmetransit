@@ -34,7 +34,7 @@ def get_lc(hdu):
     return hdr, t, f, ef
 
 
-def boxcar(t, f, ef, dt=.2, include_edges=False):
+def boxcar(t, f, ef, dt=.2, include_edges=False, tfull=np.zeros(0)):
     '''Boxbar bin the light curve.'''
     Nbounds = int(np.floor((t.max()-t.min()) / dt))
     tbin, fbin, efbin = np.zeros(Nbounds-1), np.zeros(Nbounds-1), \
@@ -48,7 +48,8 @@ def boxcar(t, f, ef, dt=.2, include_edges=False):
     ##plt.plot(tbin, fbin, 'bo')
     ##plt.show()
     if include_edges:
-        tbin = np.append(np.append(t.min(), tbin), t.max())
+	assert tfull.size > 1
+        tbin = np.append(np.append(tfull.min(), tbin), tfull.max())
 	fbin = np.append(np.append(np.median(f[:10]), fbin), np.median(f[-10:]))
         efbin = np.append(np.append(np.median(ef[:10]), efbin), np.median(ef[-10:]))
     return tbin, fbin, efbin
@@ -218,7 +219,7 @@ def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Npnts=5e2, medkernel=99
 	dt = Prot/4.
     # trim outliers and median filter to avoid fitting deep transits
     g = abs(f-np.median(f)) <= Nsig*f.std()
-    tbin, fbin, efbin = boxcar(bjd[g], medfilt(f[g],medkernel), ef[g], dt=dt, include_edges=True)
+    tbin, fbin, efbin = boxcar(bjd[g], medfilt(f[g],medkernel), ef[g], dt=dt, include_edges=True, tfull=bjd)
     sens.tbin, sens.fbin, sens.efbin = tbin, fbin, efbin
     #_, mubin, sigbin = mcmc0.get_model0(thetaGP, tbin, fbin, efbin)
     _, resultsGP, mubin, sigbin = _optimize_GP(thetaGP, tbin, fbin, efbin)
