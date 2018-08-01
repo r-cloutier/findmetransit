@@ -58,7 +58,15 @@ def get_timeseries(mag, Teff, Rs, Ms, Ps, rpRss, add_systematic=True,
 	k1 = george.kernels.ExpSquaredKernel(l)
 	k2 = george.kernels.ExpSine2Kernel(G,P)
 	gp = george.GP(k1+k2)
-	tbin, fbin, efbin = boxcar(bjd, fcorr, ef, include_edges=True, tfull=bjd)
+	# get time binning and bin the light curve
+    	Npnts_per_timescale, Npntsmax = 8., 6e2
+    	timescale_to_resolve = Pgp / Npnts_per_timescale
+    	Ttot = bjd.max() - bjd.min()
+    	if (Ttot/timescale_to_resolve <= Npntsmax):
+            dt = timescale_to_resolve
+    	else:
+            dt = Ttot / Npntsmax 
+	tbin, fbin, efbin = boxcar(bjd, fcorr, ef, dt=dt, include_edges=True, tfull=bjd)
 	fint = interp1d(tbin, gp.sample(tbin))
 	fact = fint(bjd)
 	fact -= np.median(fact)

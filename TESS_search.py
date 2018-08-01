@@ -55,7 +55,7 @@ def boxcar(t, f, ef, dt=.2, include_edges=False, tfull=np.zeros(0)):
     return tbin, fbin, efbin
 
 
-def initialize_GP_hyperparameters(bjd, f, ef, Pindex=0):
+def initialize_GP_hyperparameters(bjd, f, ef, Pindex=0, Npntsmax=6e2):
     '''Guess initial values of the GP hyperparameters.'''
     # P and l from periodogram
     per,_,pwrn = compute_LSperiodogram(bjd, f, ef,
@@ -70,12 +70,20 @@ def initialize_GP_hyperparameters(bjd, f, ef, Pindex=0):
     # s is just a fraction of the photometric uncertainty
     s = np.median(ef)*.1
     # a from binned LC
-    tbin, fbin, efbin = boxcar(bjd, f, ef)
+    Npnts_per_timescale = 8.
+    timescale_to_resolve = Pgp / Npnts_per_timescale
+    # bin the light curve
+    Ttot = bjd.max() - bjd.min()
+    if (Ttot/timescale_to_resolve <= Npntsmax):
+        dt = timescale_to_resolve
+    else:
+        dt = Ttot / Npntsmax 
+    tbin, fbin, efbin = boxcar(bjd, f, ef, dt=dt)
     lna = np.log(np.max(abs(fbin-fbin.mean())) * .75)
     return lna, lnl, lnG, lnP#, s
 
 
-def do_optimize_0(bjd, f, ef, N=10, Npnts=5e2, Nsig=3, medkernel=99):
+def do_optimize_0(bjd, f, ef, N=10, Npntsmax=6e2, Nsig=3, medkernel=99):
     '''First fit the PDC LC with GP and a no planet model using an optimization 
     routine and tested with N different initializations.'''
     # test various hyperparameter initializations and keep the one resulting
@@ -86,13 +94,16 @@ def do_optimize_0(bjd, f, ef, N=10, Npnts=5e2, Nsig=3, medkernel=99):
     for i in range(N):
         # get initial GP parameters (P, and l from periodogram)
         thetaGPs_in[i] = initialize_GP_hyperparameters(bjd, f, ef, Pindex=i)
-        Prot = np.exp(thetaGPs_in[i,3])
+        #Prot = np.exp(thetaGPs_in[i,3])
+        Npnts_per_timescale = 8.
+        timescale_to_resolve = np.exp(thetaGPs_in[i,np.array([1,3])]).min() / \
+                               Npnts_per_timescale
         # bin the light curve
-        if (Prot/4. > (bjd.max()-bjd.min())/1e2) or \
-           (np.arange(bjd.min(), bjd.max(), Prot/4.).size > Npnts):
-            dt = (bjd.max()-bjd.min())/Npnts 
-        else: 
-            dt = Prot/4.
+        Ttot = bjd.max() - bjd.min()
+        if (Ttot/timescale_to_resolve <= Npntsmax):
+            dt = timescale_to_resolve
+        else:
+            dt = Ttot / Npntsmax 
 	# trim outliers and median filter to avoid fitting deep transits
  	g = abs(f-np.median(f)) <= Nsig*f.std()
         tbin, fbin, efbin = boxcar(bjd[g], medfilt(f[g],medkernel), ef[g], dt=dt)
@@ -208,15 +219,20 @@ def _optimize_GP(thetaGP, x, res, ey):
     return gp, results, mu, sig
 
 
-def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Npnts=5e2, medkernel=99, Nsig=3):
+def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Npntsmax=6e2, medkernel=99, Nsig=3):
     '''Search for periodic transit-like events.'''
     # "detrend" the lc
     assert len(thetaGP) == 4
     Prot = np.exp(thetaGP[3])
-    if (Prot/4. > (bjd.max()-bjd.min())/1e2) or (np.arange(bjd.min(), bjd.max(), Prot/4.).size > Npnts):
-    	dt = (bjd.max()-bjd.min())/Npnts
-    else: 
-	dt = Prot/4.
+    Npnts_per_timescale = 8.
+    timescale_to_resolve = np.exp(thetaGPs_in[i,np.array([1,3])]).min() / \
+                           Npnts_per_timescale
+    # bin the light curve
+    Ttot = bjd.max() - bjd.min()
+    if (Ttot/timescale_to_resolve <= Npntsmax):
+        dt = timescale_to_resolve
+    else:
+        dt = Ttot / Npntsmax
     # trim outliers and median filter to avoid fitting deep transits
     g = abs(f-np.median(f)) <= Nsig*f.std()
     tbin, fbin, efbin = boxcar(bjd[g], medfilt(f[g],medkernel), ef[g], dt=dt, include_edges=True, tfull=bjd)
