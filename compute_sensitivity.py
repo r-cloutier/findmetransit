@@ -459,7 +459,6 @@ if __name__ == '__main__':
 
     # for this planet sample
     Nstars_per_star = 20
-    Nplanets = 1
     for i in range(Nstars_per_star):
         fname = 'TOIsensitivity27_mult%i_planet%.5d_iteration%.3d'%(Nplanets,fnum,i)
 	if do_i_run('Results/%s'%fname):
