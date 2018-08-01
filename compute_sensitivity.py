@@ -321,12 +321,12 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
 
     # do joint GP+transit model
     if np.any(sens.is_detected.astype(bool)):
-    	##params, transit_params, resultsGPfin, mufin, sigfin = joint_LC_fit(sens)
-    	##sens.params_guessfin = params
-	##sens.transit_params = transit_params
-    	##sens.resultsGPfin = resultsGPfin
-    	##sens.mufin, sens.sigfin = mufin, sigfin
-    	##sens.pickleobject()
+    	params, transit_params, resultsGPfin, mufin, sigfin = joint_LC_fit(sens)
+    	sens.params_guessfin = params
+	sens.transit_params = transit_params
+    	sens.resultsGPfin = resultsGPfin
+    	sens.mufin, sens.sigfin = mufin, sigfin
+    	sens.pickleobject()
 
 
 def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
