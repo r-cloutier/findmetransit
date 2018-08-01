@@ -321,9 +321,10 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
 
     # do joint GP+transit model
     if np.any(sens.is_detected.astype(bool)):
-    	##params, resultsGPfin, mufin, sigfin = joint_LC_fit(sens)#params, thetaGPout, bjd, f, fcorr, ef)
+    	##params, transit_params, resultsGPfin, mufin, sigfin = joint_LC_fit(sens)
     	##sens.params_guessfin = params
-    	##sens.resultsGPfin = resultsfin
+	##sens.transit_params = transit_params
+    	##sens.resultsGPfin = resultsGPfin
     	##sens.mufin, sens.sigfin = mufin, sigfin
     	##sens.pickleobject()
 
