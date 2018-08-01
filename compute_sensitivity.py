@@ -4,6 +4,7 @@ import linear_lnlike as llnl
 import batman, ellc
 from truncate_cmap import *
 from sensitivity_class import *
+from joint_LCmodel import *
 
 
 # M dwarfs from the TESS CTL (candidate target list) only 

@@ -207,7 +207,7 @@ def _optimize_GP(thetaGP, x, res, ey):
     return gp, results, mu, sig
 
 
-def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Npnts=5e2, medkernel=99):
+def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Npnts=5e2, medkernel=99, Nsig=3):
     '''Search for periodic transit-like events.'''
     # "detrend" the lc
     assert len(thetaGP) == 4
