@@ -423,7 +423,7 @@ def add_planets(Nplanets, Ps, rps, Ms):
 
 
 def do_i_run(fname):
-    if os.path.exists(fname):
+    if os.path.exists('%s/Sensitivity_class'%fname):
 	self = loadpickle('%s/Sensitivity_class'%fname)
 	try:
 	    _ = getattr(self, 'is_detected')
