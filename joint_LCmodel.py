@@ -49,8 +49,8 @@ def joint_LC_fit(sens):
                  float(rvs.inclination(P,sens.Ms,sens.Rs,-1)), u1*1.1, u2*1.1))
 
         # optimize transit model parameters
-        popt,_ = curve_fit(transit_model_func, bjd, fcorr, p0=p0, sigma=ef,
-                           absolute_sigma=True, bounds=bnds)
+        popt,_ = curve_fit(transit_model_func, sens.bjd, sens.fcorr, p0=p0,
+                           sigma=sens.ef, absolute_sigma=True, bounds=bnds)
         transit_model += transit_model_func(sens.tbin, *popt) - 1
     transit_model += 1
     
@@ -60,15 +60,17 @@ def joint_LC_fit(sens):
     k2 = george.kernels.ExpSine2Kernel(G,Pgp)
     gp = george.GP(a*(k1+k2))
     try:
-        transit_
         results = gp.optimize(sens.tbin, sens.fbin-transit_model, sens.efbin)
         resultsGP = results[0]
-        gp.compute(x, ey)
-        mu, cov = gp.predict(res, x)
-        sig = np.sqrt(np.diag(cov))
+        gp.compute(sens.tbin, sens.efbin)
+        mubin, covbin = gp.predict(sens.fbin-transit_model, sens.tbin)
+        sigbin = np.sqrt(np.diag(covbin))
+        fintmu, fintsig = interp1d(sens.tbin, mubin), \
+                          interp1d(sens.tbin, sigbin)
+        mu, sig = fintmu(sens.bjd), fintsig(sens.bjd)
     except (ValueError, np.linalg.LinAlgError):
-        resultsGP, mu, sig = np.zeros(len(thetaGP)), np.zeros(sens.tbin.size), \
-                             np.zeros(sens.tbin.size)
+        resultsGP, mu, sig = np.zeros(len(thetaGP)), np.zeros(sens.bjd.size), \
+                             np.zeros(sens.bjd.size)
 
     # optimize planets again on the newly detrended LC
     fcorr2 = f - mu + 1 if mu.sum() > 0 else f - mu
@@ -91,11 +93,11 @@ def joint_LC_fit(sens):
                                         sigma=ef, absolute_sigma=True,
                                         bounds=bnds)
     # get final parameters
-    Ps, T0s = transit_params[:,:2]
+    Ps, T0s = transit_params[:,:2].T
     depths = transit_params[:,3]**2
     rps = rvs.m2Rearth(rvs.Rsun2m(transit_params[:,3]*sens.Rs))
     bs = rvs.impactparam_inc(Ps, sens.Ms, sens.Rs, transit_params[:,4])
     durations = rvs.transit_width(Ps, sens.Ms, sens.Rs, rps, bs)
-    paramsout = np.array([Ps, T0s, depths, durations])
+    paramsout = np.array([Ps, T0s, depths, durations]).T
 
     return paramsout, transit_params, resultsGP, mu, sig
