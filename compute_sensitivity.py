@@ -412,7 +412,7 @@ if __name__ == '__main__':
     # for this planet sample
     Nstars_per_star = 20
     for i in range(Nstars_per_star):
-        fname = 'TOIsensitivity27_%.5d_%.3d'%(fnum,i)
+        fname = 'TOIsensitivity27_planet%.5d_iteration%.3d'%(fnum,i)
 	if do_i_run('Results/%s'%fname):
             g = np.random.randint(0,Tmag.size)  # get random star from the candidate target list
             rpRs = rvs.Rearth2m(rp) / rvs.Rsun2m(Rs[g])
