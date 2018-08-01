@@ -19,19 +19,37 @@ def get_LDcoeffs(Teff, Ms, Rs, Z=0):
     return float(lint_a(Teff,logg)), float(lint_b(Teff,logg))
 
 
-def transit_model_func(bjd, P, T0, aRs, rpRs, inc, u1, u2):
+def transit_model_func(bjd, P, T0, aRs, rpRs, inc, **kwargs):
     p = batman.TransitParams()
     p.t0, p.per, p.rp = 0., 1., rpRs
     p.a, p.inc, p.ecc = aRs, inc, 0.
+    u1, u2 = kwargs['u1'], kwargs['u2']
     p.w, p.limb_dark, p.u = 90., 'quadratic', [u1,u2]
     phase = foldAt(bjd, P, T0)
     m = batman.TransitModel(p, phase)
     f = m.light_curve(p)
     return f
-    
 
-def joint_LC_fit(sens):
+
+def transit_model_func_curve_fit(u1, u2):
+    def transit_model_func_in(bjd, P, T0, aRs, rpRs, inc):
+        p = batman.TransitParams()
+        p.t0, p.per, p.rp = 0., 1., rpRs
+        p.a, p.inc, p.ecc = aRs, inc, 0.
+        p.w, p.limb_dark, p.u = 90., 'quadratic', [u1,u2]
+        phase = foldAt(bjd, P, T0)
+        m = batman.TransitModel(p, phase)
+        f = m.light_curve(p)
+        return f
+    return transit_model_func_in
+
+
+
+def joint_LC_fit(sens, Nsig=3, medkernel=49):
     '''Iteratively optimize the planetary and GP model parameters'''
+    # get fixed LD coefficients for this star
+    u1, u2 = get_LDcoeffs(sens.Teff, sens.Ms, sens.Rs)
+    
     # optimize planets in detrended LC
     Nplanets = sens.params_guess.shape[0]
     transit_model = np.zeros(sens.tbin.size)
@@ -41,17 +59,17 @@ def joint_LC_fit(sens):
         P, T0, depth = self.params_guess[i,:3]
         aRs = rvs.AU2m(rvs.semimajoraxis(P,sens.Ms,0)) / rvs.Rsun2m(sens.Rs)
         rpRs = np.sqrt(depth)
-        u1, u2 = get_LDcoeffs(sens.Teff, sens.Ms, sens.Rs)
-        p0 = P, T0, aRs, rpRs, 90., u1, u2
+        p0 = P, T0, aRs, rpRs, 90.
         bnds = ((P*.98, T0-.5*P, aRs*.9, 0,
-                 float(rvs.inclination(P,sens.Ms,sens.Rs,1)), u1*.9, u2*.9),
+                 float(rvs.inclination(P,sens.Ms,sens.Rs,1))),
                 (P*1.02, T0+.5*P, aRs*1.1, .5,
-                 float(rvs.inclination(P,sens.Ms,sens.Rs,-1)), u1*1.1, u2*1.1))
+                 float(rvs.inclination(P,sens.Ms,sens.Rs,-1))))
 
         # optimize transit model parameters
-        popt,_ = curve_fit(transit_model_func, sens.bjd, sens.fcorr, p0=p0,
-                           sigma=sens.ef, absolute_sigma=True, bounds=bnds)
-        transit_model += transit_model_func(sens.tbin, *popt) - 1
+        popt,_ = curve_fit(transit_model_func_curve_fit(u1, u2),
+                           sens.bjd, sens.fcorr, p0=p0, sigma=sens.ef,
+                           absolute_sigma=True, bounds=bnds)
+        transit_model += transit_model_func(sens.tbin, *popt, **lds) - 1
     transit_model += 1
     
     # optimize GP model in the presence of the transit model
@@ -59,11 +77,16 @@ def joint_LC_fit(sens):
     k1 = george.kernels.ExpSquaredKernel(l)
     k2 = george.kernels.ExpSine2Kernel(G,Pgp)
     gp = george.GP(a*(k1+k2))
+    # trim outliers and median filter to avoid fitting deep transits
+    resbin = sens.fbin - transit_model
+    g = abs(resbin-np.median(resbin)) <= Nsig*resbin.std()
+    tbin, resbin, efbin = sens.tbin[g], medfilt(resbin[g],medkernel), \
+                          sens.efbin[g]
     try:
-        results = gp.optimize(sens.tbin, sens.fbin-transit_model, sens.efbin)
+        results = gp.optimize(tbin, resbin, efbin)
         resultsGP = results[0]
-        gp.compute(sens.tbin, sens.efbin)
-        mubin, covbin = gp.predict(sens.fbin-transit_model, sens.tbin)
+        gp.compute(tbin, efbin)
+        mubin, covbin = gp.predict(resbin, sens.tbin)
         sigbin = np.sqrt(np.diag(covbin))
         fintmu, fintsig = interp1d(sens.tbin, mubin), \
                           interp1d(sens.tbin, sigbin)
@@ -73,24 +96,24 @@ def joint_LC_fit(sens):
                              np.zeros(sens.bjd.size)
 
     # optimize planets again on the newly detrended LC
-    fcorr2 = f - mu + 1 if mu.sum() > 0 else f - mu
-    transit_params = np.zeros((Nplanets, 7))
+    fcorr2 = sens.f - mu + 1 if mu.sum() > 0 else sens.f - mu
+    transit_params = np.zeros((Nplanets, 5))
     for i in range(Nplanets):
 
         # make initial transit parameter guess
         P, T0, depth = self.params_guess[i,:3]
         aRs = rvs.AU2m(rvs.semimajoraxis(P,sens.Ms,0)) / rvs.Rsun2m(sens.Rs)
         rpRs = np.sqrt(depth)
-        u1, u2 = get_LDcoeffs(sens.Teff, sens.Ms, sens.Rs)
-        p0 = P, T0, aRs, rpRs, 90., u1, u2
+        p0 = P, T0, aRs, rpRs, 90.
         bnds = ((P*.98, T0-.5*P, aRs*.9, 0,
-                 float(rvs.inclination(P,sens.Ms,sens.Rs,1)), u1*.9, u2*.9),
+                 float(rvs.inclination(P,sens.Ms,sens.Rs,1))),
                 (P*1.02, T0+.5*P, aRs*1.1, .5,
-                 float(rvs.inclination(P,sens.Ms,sens.Rs,-1)), u1*1.1, u2*1.1))
+                 float(rvs.inclination(P,sens.Ms,sens.Rs,-1))))
 
         # optimize transit model parameters
-        transit_params[i],_ = curve_fit(transit_model_func, bjd, fcorr2, p0=p0,
-                                        sigma=ef, absolute_sigma=True,
+        transit_params[i],_ = curve_fit(transit_model_func_curve_fit(u1, u2),
+                                        sens.bjd, fcorr2, p0=p0,
+                                        sigma=sens.ef, absolute_sigma=True,
                                         bounds=bnds)
     # get final parameters
     Ps, T0s = transit_params[:,:2].T
