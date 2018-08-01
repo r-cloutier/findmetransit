@@ -132,7 +132,7 @@ def fit_GP_0(thetaGP, tbin, fbin, efbin):
     k1 = george.kernels.ExpSquaredKernel(l)
     k2 = george.kernels.ExpSine2Kernel(G,Pgp)
     gp = george.GP(a*(k1+k2))
-    bnds = ((-np.inf,np.inf),(-np.inf,np.inf),(-5,5),(-10,10))
+    bnds = ((-20,0),(-10,10),(-5,5),(-10,10))
     results = gp.optimize(tbin, fbin, efbin, **{'bounds':bnds})
     try:
         gp.compute(tbin, efbin)
