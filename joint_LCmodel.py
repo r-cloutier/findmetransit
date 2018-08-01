@@ -1,6 +1,7 @@
 from sensitivity_class import *
 import rvs, batman
 from scipy.interpolate import LinearNDInterpolator as lint
+from scipy.signal import medfilt
 
 
 def get_LDcoeffs(Teff, Ms, Rs, Z=0):
