@@ -68,9 +68,12 @@ def joint_LC_fit(sens, Nsig=3, medkernel=49):
                  float(rvs.inclination(P,sens.Ms,sens.Rs,-1))))
 
         # optimize transit model parameters
-        popt,_ = curve_fit(transit_model_func_curve_fit(u1, u2),
-                           sens.bjd, sens.fcorr, p0=p0, sigma=sens.ef,
-                           absolute_sigma=True, bounds=bnds)
+	try:
+            popt,_ = curve_fit(transit_model_func_curve_fit(u1, u2),
+                               sens.bjd, sens.fcorr, p0=p0, sigma=sens.ef,
+                               absolute_sigma=True, bounds=bnds)
+	except RuntimeError:
+	    return sens.params_guess, np.zeros((Nplanets,5)), sens.resultsGP, np.zeros(sens.bjd.size), np.zeros(sens.bjd.size), [u1,u2]
         transit_model += transit_model_func(sens.tbin, *popt, **lds) - 1
     transit_model += 1
     
@@ -113,10 +116,14 @@ def joint_LC_fit(sens, Nsig=3, medkernel=49):
                  float(rvs.inclination(P,sens.Ms,sens.Rs,-1))))
 
         # optimize transit model parameters
-        transit_params[i],_ = curve_fit(transit_model_func_curve_fit(u1, u2),
-                                        sens.bjd, fcorr2, p0=p0,
-                                        sigma=sens.ef, absolute_sigma=True,
-                                        bounds=bnds)
+	try:
+            transit_params[i],_ = curve_fit(transit_model_func_curve_fit(u1, u2),
+                                            sens.bjd, fcorr2, p0=p0,
+                                            sigma=sens.ef, absolute_sigma=True,
+                                            bounds=bnds)
+        except RuntimeError:
+            return sens.params_guess, np.zeros((Nplanets,5)), sens.resultsGP, np.zeros(sens.bjd.size), np.zeros(sens.bjd.size), [u1,u2]
+
     # get final parameters
     Ps, T0s = transit_params[:,:2].T
     depths = transit_params[:,3]**2
@@ -125,4 +132,4 @@ def joint_LC_fit(sens, Nsig=3, medkernel=49):
     durations = rvs.transit_width(Ps, sens.Ms, sens.Rs, rps, bs)
     paramsout = np.array([Ps, T0s, depths, durations]).T
 
-    return paramsout, transit_params, resultsGP, mu, sig
+    return paramsout, transit_params, resultsGP, mu, sig, [u1,u2]
