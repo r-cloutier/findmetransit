@@ -452,17 +452,15 @@ if __name__ == '__main__':
     g = (Tmag < 11.1) & (Teff<4e3)
     Tmag, Teff, Rs, Ms = Tmag[g], Teff[g], Rs[g], Ms[g]
 
-    # get planet params
-    Nplanets = 1
-    Ps, rps = np.random.uniform(Pin,Pout,1), np.random.uniform(rpin,rpout,1)
-    Ps, rps = add_planets(Nplanets, Ps, rps, Ms)
-
     # for this planet sample
-    Nstars_per_star = 20
+    Nplanets, Nstars_per_star = 1, 20
     for i in range(Nstars_per_star):
         fname = 'TOIsensitivity27_mult%i_planet%.5d_iteration%.3d'%(Nplanets,fnum,i)
 	if do_i_run('Results/%s'%fname):
             g = np.random.randint(0,Tmag.size)  # get random star from the candidate target list
+    	    # get planet params
+    	    Ps, rps = np.random.uniform(Pin,Pout,1), np.random.uniform(rpin,rpout,1)
+    	    Ps, rps = add_planets(Nplanets, Ps, rps, Ms[g])
             rpRs = rvs.Rearth2m(rps) / rvs.Rsun2m(Rs[g])
             compute_sensitivity(fname, Ps, rpRs, Tmag[g], Rs[g], Ms[g], Teff[g],
                             	Ndays_field=Ndays_field)
