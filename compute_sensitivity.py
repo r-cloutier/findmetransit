@@ -464,6 +464,6 @@ if __name__ == '__main__':
         fname = 'TOIsensitivity27_mult%i_planet%.5d_iteration%.3d'%(Nplanets,fnum,i)
 	if do_i_run('Results/%s'%fname):
             g = np.random.randint(0,Tmag.size)  # get random star from the candidate target list
-            rpRs = rvs.Rearth2m(rp) / rvs.Rsun2m(Rs[g])
-            compute_sensitivity(fname, [P], [rpRs], Tmag[g], Rs[g], Ms[g], Teff[g],
+            rpRs = rvs.Rearth2m(rps) / rvs.Rsun2m(Rs[g])
+            compute_sensitivity(fname, Ps, rpRs, Tmag[g], Rs[g], Ms[g], Teff[g],
                             	Ndays_field=Ndays_field)
