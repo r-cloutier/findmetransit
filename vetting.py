@@ -182,10 +182,12 @@ def _is_Vshaped(params, bjd, fcorr, ef, Ms, Rs, Teff):
     phase = foldAt(bjd, P, T0)
     phase[phase>.5] -= 1
     depth = fmodel.min()
-    T1, T2 = phase[(phase<=0) & (fmodel==1)].max()*P, \
-             phase[(phase<=0) & (fmodel==depth)].min()*P
-    T3, T4 = phase[(phase>=0) & (fmodel==depth)].max()*P, \
+    T1, T4 = phase[(phase<=0) & (fmodel==1)].max()*P, \
              phase[(phase>=0) & (fmodel==1)].min()*P
+    in_ingress = (phase<=0) & np.isclose(fmodel,depth,rtol=1e-4)
+    T2 = phase[in_ingress].min()*P if in_ingress.sum() > 0 else (T4-T1)*.1
+    in_egress = (phase>=0) & np.isclose(fmodel,depth,rtol=1e-4)
+    T3 = phase[in_egress].max()*P if in_egress.sum() > 0 else (T4-T1)*.1
     Tingress, Tegress, duration = T2-T1, T4-T3, T4-T1
     Tedge = Tingress + Tegress
     
