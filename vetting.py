@@ -2,7 +2,8 @@ from imports import *
 import rvs, batman
 from scipy.interpolate import LinearNDInterpolator as lint
 
-def identify_EBs(params, bjd, fcorr, ef, Rs, Ms, Teff,
+
+def identify_EBs(params, bjd, fcorr, ef, Ms, Rs, Teff,
                  SNRthresh=3., rpmax=30, detthresh=1.5):
     '''For each proposed planet in params, run through a variety of checks to 
     vetting the planetary candidates and identify EB false positives.'''
@@ -12,25 +13,30 @@ def identify_EBs(params, bjd, fcorr, ef, Rs, Ms, Teff,
     for i in range(Nplanets):
 
         # get best fit parameters
-        params[i] = _fit_params(params, bjd, fcorr, ef)
+        paramsout[i] = _fit_params(params[i], bjd, fcorr, ef, Ms, Rs, Teff)
         
         # ensure the planet is not too big
         rpRs = np.sqrt(params[i,2])
         isEB[i] = 1 if rpRs > .5 else isEB[i]
-        rp = rvs.m2Reath(rvs.Rsun2m(rpRs*Rs))
+        rp = rvs.m2Rearth(rvs.Rsun2m(rpRs*Rs))
         isEB[i] = 1 if rp > rpmax else isEB[i]
 
         # check for secondary eclipse
-        isEB[i] = _is_eclipse(params[i], bjd, fcorr, ef, detthresh)
-
+        eclipse = _is_eclipse(params[i], bjd, fcorr, ef, detthresh)
+        isEB[i] = 1 if eclipse else isEB[i]
+        
         # check for ellipsoidal variations
-        #isEB[i] = _is_ellipsoidal()
+        #ellipsoidal = _is_ellipsoidal()
+        #isEB[i] = 1 if ellipsoidal else isEB[i]
         # how can I do this without knowing the parameters of the binary?
 
         # flag V-shaped transits (does not implies an EB)
-        maybeEB[i] = _is_Vshaped(params, bjd, fcorr, ef, Rs, Ms, Teff)
+        Vshaped, duration = _is_Vshaped(params[i], bjd, fcorr, ef, Ms, Rs, Teff)
+        maybeEB[i] = 1 if Vshaped else maybeEB[i]
 
-        
+        # is duration reasonable? # 
+        EBduration = _is_EB_duration(duration)
+        isEB[i] = 1 if EBduration else isEB[i]
         
     # save planet and EB parameters
     maybeEB[isEB==1] = 1
@@ -40,17 +46,27 @@ def identify_EBs(params, bjd, fcorr, ef, Rs, Ms, Teff,
     return params, EBparams, maybeEB
 
 
-def _fit_params(params, bjd, fcorr, ef):
+
+def _fit_params(params, bjd, fcorr, ef, Ms, Rs, Teff):
     '''Get best-fit parameters.'''
     assert params.shape == (4,)
     P, T0, depth, duration = params
-    bnds = ((P*.98,P*1.02), (T0-duration,T0+duration),
-            (0,1), (.5*duration,2*duration))
-    nll = lambda *args: -lnlike(*args)
-    results = minimize(nll, params, args=(bjd, fcorr, ef), bounds=bnds)
-    if results['success']:
-        return results['x']
-    else:
+    u1, u2 = _get_LDcoeffs(Ms, Rs, Teff)
+    aRs = rvs.AU2m(rvs.semimajoraxis(P,Ms,0)) / rvs.Rsun2m(Rs)
+    rpRs = np.sqrt(depth)
+    p0 = aRs, rpRs, 90.
+    bnds = ((aRs*.9, 0, float(rvs.inclination(P,Ms,Rs,1.1))),
+            (aRs*1.1, 1, float(rvs.inclination(P,Ms,Rs,-1.1))))
+    try:
+        popt,_ = curve_fit(transit_model_func_curve_fit(P,T0,u1,u2),
+                           bjd, fcorr, p0=p0, sigma=ef,
+                           absolute_sigma=True, bounds=bnds)
+        aRs, rpRs, inc = popt
+        depth = rpRs**2
+        b = rvs.impactparam_inc(P, Ms, Rs, inc)
+        duration = P/(np.pi*aRs) * np.sqrt((1+np.sqrt(depth))**2 - b*b)
+        return P, T0, depth, duration
+    except RuntimeError:
         return params
 
 
@@ -90,13 +106,13 @@ def _is_eclipse(params, bjd, fcorr, ef, DT):
     depth_transit, var_transit = depth, np.median(ef[intransit])**2
     depth_occultation = 1-np.median(fcorr[inoccultation])
     var_occultation = np.std(fcorr[inoccultation])**2
-    if depth_occultation / sig_occultation > DT:
-        return 1.
+    if depth_occultation / np.sqrt(var_occultation) > DT:
+        return True
     elif (depth_transit - depth_occultation) / np.sqrt(var_transit + \
                                                        var_occultation) > DT:
-        return 1.
+        return True
     else:
-        return 0.
+        return False
 
 
 def _is_ellipsoidal():
@@ -105,7 +121,7 @@ def _is_ellipsoidal():
     return None
 
 
-def _get_LDcoeffs(Teff, Ms, Rs, Z=0):
+def _get_LDcoeffs(Ms, Rs, Teff, Z=0):
     '''Interpolate Claret 2017 grid of limb darkening coefficients to a
     given star.'''
     # get LD coefficient grid (Z is always 0 for some reason)
@@ -134,13 +150,13 @@ def transit_model_func_curve_fit(P, T0, u1, u2):
     return transit_model_func_in
     
 
-def _is_Vshaped(params, bjd, fcorr, ef, Rs, Ms, Teff):
+def _is_Vshaped(params, bjd, fcorr, ef, Ms, Rs, Teff):
     '''check if transit is V-shaped although this does not imply an EB 
     because inclined transiting planets can look like this as well.'''
     # fit transit model
     assert params.shape == (4,)
     P, T0, depth = params[:3]
-    u1, u2 = _get_LDcoeffs(Teff, Ms, Rs)
+    u1, u2 = _get_LDcoeffs(Ms, Rs, Teff)
     aRs = rvs.AU2m(rvs.semimajoraxis(P,Ms,0)) / rvs.Rsun2m(Rs)
     rpRs = np.sqrt(depth)
     p0 = aRs, rpRs, 90.
@@ -152,8 +168,7 @@ def _is_Vshaped(params, bjd, fcorr, ef, Rs, Ms, Teff):
                            absolute_sigma=True, bounds=bnds)
         aRs, rpRs, inc = popt
     except RuntimeError:
-        print 'here'
-        return 0.
+        return False, 0.
 
     # get ingress, egress times and duration
     transit_func = transit_model_func_curve_fit(P,T0,0,0)
@@ -170,8 +185,15 @@ def _is_Vshaped(params, bjd, fcorr, ef, Rs, Ms, Teff):
     
     # V-shaped if T2==T3 or if ingress+egress time is the same as the duration 
     if T2 == T3:
-        return 1.
+        return True, duration
     elif (Tedge >= duration*.99) & (Tedge <= duration*1.01):
-        return 1.
+        return True, duration
     else:
-        return 0.
+        return False, duration
+
+
+def _is_EB_duration(duration, P, Ms, Rs, rpmax=30):
+    '''If the duration is longer than the maximum allowed planet duration 
+    for a given period and star, then flag as an EB.'''
+    durationmax = rvs.transit_width(P, Ms, Rs, rpmax, 0)
+    return duration > durationmax
