@@ -331,9 +331,9 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
     sens.EBparams_guess, sens.maybeEBparams_guess = EBparams, maybeEBparams
     sens.pickleobject()
 
-    # is the planet detected?
-    detected = True if np.any(np.isclose(params[:,0], Ps[0], atol=Ps[0]*.02)) else False
-    sens.is_detected = np.array([detected]).astype(int)
+    # are planets detected?
+    detected = np.array([int(np.any(np.any(np.isclose(params[i,0],Ps,atol=Ps*.02)))) for i in range(params.shape[0])])
+    sens.is_detected = detected.astype(int)
     sens.pickleobject()
 
     # do joint GP+transit model
@@ -365,13 +365,16 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
 	try:
 	    _ = getattr(sens, 'is_detected')
 	    Ps = np.append(Ps, sens.params_true[:,0])
-            rps = np.append(rps, rvs.m2Rearth(rvs.Rsun2m(np.sqrt(sens.params_true[:,2])*sens.Rs)))
+            rps = np.append(rps, sens.rps)
             detected = np.append(detected, sens.is_detected)
 	except AttributeError:
 	    pass
 
     assert Ps.size == rps.size
     assert Ps.size == detected.size
+    save_fits(Ps, 'Results/%s_Ps'%prefix)
+    save_fits(rps, 'Results/%s_rps'%prefix)
+    save_fits(detected, 'Results/%s_detected'%prefix)
 
     # get completeness
     Pgrid = np.logspace(np.log10(.5),np.log10(27.4),12)
