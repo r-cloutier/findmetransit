@@ -59,13 +59,15 @@ def get_timeseries(mag, Teff, Rs, Ms, Ps, rpRss, add_systematic=True,
 	k2 = george.kernels.ExpSine2Kernel(G,P)
 	gp = george.GP(k1+k2)
 	# get time binning and bin the light curve
-    	Npnts_per_timescale, Npntsmax = 8., 6e2
+    	Npnts_per_timescale, Npntsmin, Npntsmax = 8., 5e2, 1e3
     	timescale_to_resolve = P / Npnts_per_timescale
     	Ttot = bjd.max() - bjd.min()
-    	if (Ttot/timescale_to_resolve <= Npntsmax):
-            dt = timescale_to_resolve
+    	if Ttot/timescale_to_resolve < Npntsmin:
+            dt = Ttot / Npntsmin
+    	elif Ttot/timescale_to_resolve > Npntsmax:
+            dt = Ttot / Npntsmax
     	else:
-            dt = Ttot / Npntsmax 
+            dt = timescale_to_resolve
 	tbin, fbin, efbin = boxcar(bjd, fcorr, ef, dt=dt, include_edges=True, tfull=bjd)
 	fint = interp1d(tbin, gp.sample(tbin))
 	fact = fint(bjd)

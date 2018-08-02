@@ -55,7 +55,8 @@ def boxcar(t, f, ef, dt=.2, include_edges=False, tfull=np.zeros(0)):
     return tbin, fbin, efbin
 
 
-def initialize_GP_hyperparameters(bjd, f, ef, Pindex=0, Npntsmax=6e2):
+def initialize_GP_hyperparameters(bjd, f, ef, Pindex=0,
+                                  Npntsmin=5e2, Npntsmax=1e3):
     '''Guess initial values of the GP hyperparameters.'''
     # P and l from periodogram
     per,_,pwrn = compute_LSperiodogram(bjd, f, ef,
@@ -69,21 +70,24 @@ def initialize_GP_hyperparameters(bjd, f, ef, Pindex=0, Npntsmax=6e2):
     lnl, lnG, lnP = np.log(Pgp*3), 0., np.log(Pgp)
     # s is just a fraction of the photometric uncertainty
     s = np.median(ef)*.1
-    # a from binned LC
+    # a from binned LC    
     Npnts_per_timescale = 8.
     timescale_to_resolve = Pgp / Npnts_per_timescale
     # bin the light curve
     Ttot = bjd.max() - bjd.min()
-    if (Ttot/timescale_to_resolve <= Npntsmax):
-        dt = timescale_to_resolve
+    if Ttot/timescale_to_resolve < Npntsmin:
+        dt = Ttot / Npntsmin
+    elif Ttot/timescale_to_resolve > Npntsmax:
+        dt = Ttot / Npntsmax
     else:
-        dt = Ttot / Npntsmax 
+        dt = timescale_to_resolve
     tbin, fbin, efbin = boxcar(bjd, f, ef, dt=dt)
     lna = np.log(np.max(abs(fbin-fbin.mean())) * .75)
     return lna, lnl, lnG, lnP#, s
 
 
-def do_optimize_0(bjd, f, ef, N=10, Npntsmax=6e2, Nsig=3, medkernel=99):
+def do_optimize_0(bjd, f, ef, N=10,
+                  Npntsmin=5e2, Npntsmax=1e3, Nsig=3, medkernel=99):
     '''First fit the PDC LC with GP and a no planet model using an optimization 
     routine and tested with N different initializations.'''
     # test various hyperparameter initializations and keep the one resulting
@@ -100,15 +104,18 @@ def do_optimize_0(bjd, f, ef, N=10, Npntsmax=6e2, Nsig=3, medkernel=99):
                                Npnts_per_timescale
         # bin the light curve
         Ttot = bjd.max() - bjd.min()
-        if (Ttot/timescale_to_resolve <= Npntsmax):
-            dt = timescale_to_resolve
+        if Ttot/timescale_to_resolve < Npntsmin:
+            dt = Ttot / Npntsmin
+        elif Ttot/timescale_to_resolve > Npntsmax:
+            dt = Ttot / Npntsmax
         else:
-            dt = Ttot / Npntsmax 
+            dt = timescale_to_resolve
 	# trim outliers and median filter to avoid fitting deep transits
- 	g = abs(f-np.median(f)) <= Nsig*f.std()
-        tbin, fbin, efbin = boxcar(bjd[g], medfilt(f[g],medkernel), ef[g], dt=dt)
+        g = abs(f-np.median(f)) <= Nsig*f.std()
+        tbin, fbin, efbin =boxcar(bjd[g], medfilt(f[g],medkernel), ef[g], dt=dt)
         gp,mu,sig,thetaGPs_out[i] = fit_GP_0(thetaGPs_in[i],
                                              tbin, fbin, efbin)
+	print 'here', tbin.size, mu.size
         # compute residuals and the normality test p-value
         _,pvalues[i] = normaltest(fbin-mu)
     # select the most gaussian-like residuals
@@ -219,7 +226,8 @@ def _optimize_GP(thetaGP, x, res, ey):
     return gp, results, mu, sig
 
 
-def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Npntsmax=6e2, medkernel=99, Nsig=3):
+def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname,
+                  Npntsmin=5e2, Npntsmax=1e3, medkernel=99, Nsig=3):
     '''Search for periodic transit-like events.'''
     # "detrend" the lc
     assert len(thetaGP) == 4
@@ -229,10 +237,12 @@ def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Npntsmax=6e2, medkernel
                            Npnts_per_timescale
     # bin the light curve
     Ttot = bjd.max() - bjd.min()
-    if (Ttot/timescale_to_resolve <= Npntsmax):
-        dt = timescale_to_resolve
-    else:
+    if Ttot/timescale_to_resolve < Npntsmin:
+        dt = Ttot / Npntsmin
+    elif Ttot/timescale_to_resolve > Npntsmax:
         dt = Ttot / Npntsmax
+    else:
+        dt = timescale_to_resolve
     # trim outliers and median filter to avoid fitting deep transits
     g = abs(f-np.median(f)) <= Nsig*f.std()
     tbin, fbin, efbin = boxcar(bjd[g], medfilt(f[g],medkernel), ef[g], dt=dt, include_edges=True, tfull=bjd)
