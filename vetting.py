@@ -4,12 +4,17 @@ from scipy.interpolate import LinearNDInterpolator as lint
 
 
 def identify_EBs(params, bjd, fcorr, ef, Ms, Rs, Teff,
-                 SNRthresh=3., rpmax=30, detthresh=1.5):
+                 SNRthresh=3., rpmax=30, detthresh=5):
     '''For each proposed planet in params, run through a variety of checks to 
     vetting the planetary candidates and identify EB false positives.'''
     Nplanets = params.shape[0]
     paramsout, isEB, maybeEB = np.zeros_like(params), np.zeros(Nplanets), \
                                np.zeros(Nplanets)
+    EBconditions = np.zeros((Nplanets, 5)).astype(bool)
+    EBcondition_labels = np.array(['rpRs > 0.5', 'rp>%.1f'%rpmax,
+                                   'secondary eclipse detected',
+                                   'transit is V-shaped',
+                                   'transit duration is too long for a planet'])
     for i in range(Nplanets):
 
         # get best fit parameters
@@ -18,12 +23,15 @@ def identify_EBs(params, bjd, fcorr, ef, Ms, Rs, Teff,
         # ensure the planet is not too big
         rpRs = np.sqrt(params[i,2])
         isEB[i] = 1 if rpRs > .5 else isEB[i]
+        EBconditions[i,0] = True if rpRs > .5 else False
         rp = rvs.m2Rearth(rvs.Rsun2m(rpRs*Rs))
         isEB[i] = 1 if rp > rpmax else isEB[i]
+        EBconditions[i,1] = True if rp > rpmax else False
 
         # check for secondary eclipse
         eclipse = _is_eclipse(params[i], bjd, fcorr, ef, detthresh)
         isEB[i] = 1 if eclipse else isEB[i]
+        EBconditions[i,2] = True if eclipse else False
         
         # check for ellipsoidal variations
         #ellipsoidal = _is_ellipsoidal()
@@ -33,17 +41,19 @@ def identify_EBs(params, bjd, fcorr, ef, Ms, Rs, Teff,
         # flag V-shaped transits (does not implies an EB)
         Vshaped, duration = _is_Vshaped(params[i], bjd, fcorr, ef, Ms, Rs, Teff)
         maybeEB[i] = 1 if Vshaped else maybeEB[i]
+        EBconditions[i,3] = True if Vshaped else False
 
-        # is duration reasonable? # 
-        EBduration = _is_EB_duration(duration)
+        # is duration reasonable? # Gunther+2016
+        EBduration = _is_EB_duration(duration, paramsout[i,0], Ms, Rs)
         isEB[i] = 1 if EBduration else isEB[i]
-        
+        EBconditions[i,4] = True if EBduration else False
+
     # save planet and EB parameters
     maybeEB[isEB==1] = 1
     isEB, maybeEB = isEB.astype(bool), maybeEB.astype(bool)
     params, EBparams, maybeEBparams = params[np.invert(isEB)], params[isEB], \
                                       params[maybeEB]
-    return params, EBparams, maybeEB
+    return params, EBparams, maybeEBparams, EBconditions, EBcondition_labels
 
 
 
@@ -103,16 +113,12 @@ def _is_eclipse(params, bjd, fcorr, ef, DT):
                     (phase >= -.5*(duration/P - 1))
 
     # define EB criteria
-    depth_transit, var_transit = depth, np.median(ef[intransit])**2
+    depth_transit, var_transit = depth, np.std(fcorr[intransit])**2
     depth_occultation = 1-np.median(fcorr[inoccultation])
     var_occultation = np.std(fcorr[inoccultation])**2
-    if depth_occultation / np.sqrt(var_occultation) > DT:
-        return True
-    elif (depth_transit - depth_occultation) / np.sqrt(var_transit + \
-                                                       var_occultation) > DT:
-        return True
-    else:
-        return False
+    return (depth_occultation / np.sqrt(var_occultation) > DT) & \
+        ((depth_transit - depth_occultation) / np.sqrt(var_transit + \
+                                                       var_occultation) > DT)
 
 
 def _is_ellipsoidal():
