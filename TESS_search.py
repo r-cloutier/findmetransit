@@ -225,7 +225,7 @@ def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Npntsmax=6e2, medkernel
     assert len(thetaGP) == 4
     Prot = np.exp(thetaGP[3])
     Npnts_per_timescale = 8.
-    timescale_to_resolve = np.exp(thetaGPs_in[i,np.array([1,3])]).min() / \
+    timescale_to_resolve = np.exp(thetaGP[np.array([1,3])]).min() / \
                            Npnts_per_timescale
     # bin the light curve
     Ttot = bjd.max() - bjd.min()

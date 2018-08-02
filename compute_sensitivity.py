@@ -60,7 +60,7 @@ def get_timeseries(mag, Teff, Rs, Ms, Ps, rpRss, add_systematic=True,
 	gp = george.GP(k1+k2)
 	# get time binning and bin the light curve
     	Npnts_per_timescale, Npntsmax = 8., 6e2
-    	timescale_to_resolve = Pgp / Npnts_per_timescale
+    	timescale_to_resolve = P / Npnts_per_timescale
     	Ttot = bjd.max() - bjd.min()
     	if (Ttot/timescale_to_resolve <= Npntsmax):
             dt = timescale_to_resolve
