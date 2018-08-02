@@ -262,14 +262,17 @@ def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname, Npntsmax=6e2, medkernel
 
     print 'Finding transit-like events and making transit parameter guesses...\n'
     Rs = hdr['RADIUS']
-    POIs, T0OIs, DOIs, ZOIs, lnLOIs, params, EBparams = llnl.identify_transit_candidates(sens, Ps, T0s, Ds, Zs, 
-									       		 lnLs_transit, 
-											 durations.size, Rs,
-									       		 bjd, fcorr, ef)
-    sens.POIs, sens.T0OIs, sens.DOIs, sens.ZOIs, sens.lnLOIs = POIs, T0OIs, DOIs, ZOIs, lnLOIs
+    POIs, T0OIs, DOIs, ZOIs, lnLOIs, params, EBparams, maybeEBparams = \
+                        llnl.identify_transit_candidates(sens, Ps, T0s, Ds, Zs,
+                                                         lnLs_transit,
+                                                         durations.size, Rs,
+                                                         bjd, fcorr, ef)
+    sens.POIs, sens.T0OIs, sens.DOIs, sens.ZOIs, sens.lnLOIs = POIs, T0OIs, \
+                                                               DOIs, ZOIs, \
+                                                               lnLOIs
 
     # return the parameters (P,T0,D,Z=depth) of the confirmed transit candidates
-    return params, EBparams
+    return params, EBparams, maybeEBparams
  
 
 def estimate_box_transit_model(P, T0, Rs, t, f, ef):

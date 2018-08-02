@@ -1,5 +1,6 @@
 from imports import *
 from scipy.optimize import curve_fit
+import vetting as vett
 import rvs, mcmc1
 
 global dispersion_sig, depth_sig
@@ -317,10 +318,16 @@ def identify_transit_candidates(sens, Ps, T0s, Ds, Zs, lnLs, Ndurations, Rs,
     params = np.array([p,t0,z,d]).T
 
     # try to identify EBs
-    params, EBparams = identify_EBs(params, bjd, fcorr, ef, Rs)
-
+    #params, EBparams = identify_EBs(params, bjd, fcorr, ef, Rs)
+    params, EBparams, maybeEBparams, EBconditions, EBcondition_labels = \
+                                    vett.identify_EBs(params, bjd, fcorr, ef,
+                                                      sens.Ms, sens.Rs, 
+						      sens.Teff)
+    sens.EBconditions, sens.EBcondition_labels = EBconditions, \
+                                                 EBcondition_labels
+    
     return POIs_final, T0OIs_final, DOIs_final, ZOIs_final, lnLOIs_final, \
-        params, EBparams
+        params, EBparams, maybeEBparams
 
 
 def _optimize_box_transit(theta, bjd, fcorr, ef):

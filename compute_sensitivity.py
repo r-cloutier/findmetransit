@@ -320,9 +320,13 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
 
     # search for transits in the corrected LC and get the transit parameters guesses
     print 'Searching for transit-like events...\n'
-    params, EBparams = find_transits(sens, bjd, f, ef, thetaGPout, hdr, fname_short)
+    params, EBparams, maybeEBparams = find_transits(sens, bjd, f, ef,
+                                                    thetaGPout, hdr,
+                                                    fname_short)
     sens.params_guess = params
-    sens.params_guess_labels = np.array(['Ps', 'T0s', 'depths [Z]', 'durations [D]'])
+    sens.params_guess_labels = np.array(['Ps', 'T0s', 'depths [Z]', \
+                                         'durations [D]'])
+    sens.EBparams_guess, sens.maybeEBparams_guess = EBparams, maybeEBparams
     sens.pickleobject()
 
     # is the planet detected?
