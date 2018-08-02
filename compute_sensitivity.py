@@ -353,7 +353,7 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
     '''Get the completeness as a function of P & rp/Rs for a set of sensitivity
     calculations'''
     # get folders
-    folders = np.array(glob.glob('Results/%s_*/Sensitivity_class'%prefix))
+    folders = np.array(glob.glob('Results/%s*/Sensitivity_class'%prefix))
     Nfolders = folders.size
     assert Nfolders > 0
 
@@ -442,11 +442,7 @@ def add_planets(Nplanets, Ps, rps, Ms):
 def do_i_run(fname):
     if os.path.exists('%s/Sensitivity_class'%fname):
 	self = loadpickle('%s/Sensitivity_class'%fname)
-	try:
-	    _ = getattr(self, 'is_detected')
-	    return False
-	except AttributeError:
-	    return True
+	return not self.DONE
     else:
 	return True
 
