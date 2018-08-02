@@ -334,6 +334,8 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
     # are planets detected?
     detected = np.array([int(np.any(np.any(np.isclose(params[i,0],Ps,atol=Ps*.02)))) for i in range(params.shape[0])])
     sens.is_detected = detected.astype(int)
+    sens.is_FP = np.invert(detected.astype(bool)).astype(int)
+    sens.paramsFP_guess = sens.params_guess[sens.is_FP.astype(bool)]
     sens.pickleobject()
 
     # do joint GP+transit model
