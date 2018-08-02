@@ -364,17 +364,18 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
 	sens = loadpickle(folders[i])
 	try:
 	    _ = getattr(sens, 'is_detected')
-	    Ps = np.append(Ps, sens.params_true[0,0])
-	    rp = rvs.m2Rearth(rvs.Rsun2m(sens.params_true[0,2]*sens.Rs))
-            rps = np.append(rps, rp)
+	    Ps = np.append(Ps, sens.params_true[:,0])
+            rps = np.append(rps, rvs.m2Rearth(rvs.Rsun2m(np.sqrt(sens.params_true[:,2])*sens.Rs)))
             detected = np.append(detected, sens.is_detected)
 	except AttributeError:
 	    pass
 
+    assert Ps.size == rps.size
+    assert Ps.size == detected.size
+
     # get completeness
-    Pgrid = np.logspace(np.log10(.5),np.log10(9.5),11)
-    rpgrid = np.logspace(np.log10(.5),np.log10(15),7)
-    #Pgrid, rpgrid = np.unique(Ps), np.unique(rps)
+    Pgrid = np.logspace(np.log10(.5),np.log10(27.4),12)
+    rpgrid = np.logspace(np.log10(.5),np.log10(15),9)
     Ndet, Ntrue = np.zeros((Pgrid.size-1, rpgrid.size-1)), \
 		  np.zeros((Pgrid.size-1, rpgrid.size-1))
     for i in range(Pgrid.size-1):
