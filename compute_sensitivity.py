@@ -14,14 +14,21 @@ medTmag, medTeff, medRs = 10.5, 3400, 0.33
 
 
 def rescale_rms(mag, rmsfloor=6e-5):
-    # get values from simulated TESS LC (rms is scatter not mean ef)
-    # should have 200 pm rms for I_C=10
-    #rms0, mag0 = 0.0017390130051, 8.02999973
-    rms0, mag0 = 2e-4, 10  # ppm and I_cousins band
-    flux_ratio = 10**(-.4*(mag0-mag))
-    rmsout = rms0 * np.sqrt(flux_ratio)
-    rmsout[rmsout<rmsfloor] = rmsfloor
-    return rmsout 
+    '''scale the rms of the lightcurve of a star with a given TESS magnitude according 
+    to the noise sources given in the CTL for M dwarfs'''
+    # fit powerlaw to photometric sigma vs Tmag
+    #Tmags,Teffs,Nstar,Ncont,Nsky,Nread,Nsyst=np.loadtxt('CTL62/00-02.csv', delimiter=',', usecols=(2,3,-5,-4,-3,-2,-1)).T  
+    #sig = np.sqrt(Nstar**2 + Ncont**2 + Nsky**2 + Nread**2 + Nsyst**2)
+    #g = (Tmags < 11.1) & (Teffs <= 4e3)
+    #popt,_ = curve_fit(_powerlawfunc, Tmags[g], sig[g], p0=(1e-10,6))
+    #assert _powerlawfunc(Tmags[g], *popt).min() >= rmsfloor
+    popt = np.array([1.77126381e-12, 8.07867123e+00]) # save time
+    # return fit value at the input TESS magnitude
+    return _powerlawfunc(mag, *popt)
+
+
+def _powerlawfunc(xarr, A, alpha, rmsfloor=6e-5):
+    return A*xarr**alpha + rmsfloor
 
 
 def get_timeseries(mag, Teff, Rs, Ms, Ps, rpRss, add_systematic=True,
