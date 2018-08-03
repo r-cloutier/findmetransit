@@ -507,7 +507,7 @@ if __name__ == '__main__':
     # for this planet sample
     Nplanets, Nstars_per_star = 2, 20
     for i in range(Nstars_per_star):
-        fname = 'TOIsensitivity27_mult%i_planet%.5d_iteration%.3d'%(Nplanets,fnum,i)
+        fname = 'TOIsensitivity27vett_mult%i_planet%.5d_iteration%.3d'%(Nplanets,fnum,i)
 	if do_i_run('Results/%s'%fname):
             g = np.random.randint(0,Tmag.size)  # get random star from the candidate target list
     	    # get planet params
