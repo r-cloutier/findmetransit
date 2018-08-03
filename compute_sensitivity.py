@@ -443,7 +443,7 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
 	plt.show()
 
 
-def add_planets(Nplanets, Ps, rps, Ms):
+def add_planets(Nplanets, Ps, rps, Ms, Ndays_field):
     '''add additional planet to be transiting and ensure dynamical stability.'''
     assert Ps.size == 1
     assert rps.size == 1
@@ -454,7 +454,7 @@ def add_planets(Nplanets, Ps, rps, Ms):
     	unstable, ind = True, 0
     	while unstable and ind < 100:
 	    # sample additional planets
-	    Ps = np.append(Ps[0], 10**np.random.uniform(np.log10(.5), np.log10(351), Nplanets-1))
+	    Ps = np.append(Ps[0], 10**np.random.uniform(np.log10(.5), np.log10(Ndays_field), Nplanets-1))
 	    rps = np.append(rps[0], 10**np.random.uniform(np.log10(.5), np.log10(15), Nplanets-1))
 	    sort = np.argsort(Ps)
 	    Ps, rps = Ps[sort], rps[sort]
@@ -512,7 +512,7 @@ if __name__ == '__main__':
             g = np.random.randint(0,Tmag.size)  # get random star from the candidate target list
     	    # get planet params
     	    Ps, rps = np.random.uniform(Pin,Pout,1), np.random.uniform(rpin,rpout,1)
-    	    Ps, rps = add_planets(Nplanets, Ps, rps, Ms[g])
+    	    Ps, rps = add_planets(Nplanets, Ps, rps, Ms[g], Ndays_field)
             rpRs = rvs.Rearth2m(rps) / rvs.Rsun2m(Rs[g])
             compute_sensitivity(fname, Ps, rpRs, Tmag[g], Rs[g], Ms[g], Teff[g],
                             	Ndays_field=Ndays_field)
