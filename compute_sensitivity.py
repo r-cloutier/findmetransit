@@ -332,9 +332,12 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
     sens.pickleobject()
 
     # are planets detected?
-    detected = np.array([int(np.any(np.any(np.isclose(params[i,0],Ps,atol=Ps*.02)))) for i in range(params.shape[0])])
-    sens.is_detected = detected.astype(int)
-    sens.is_FP = np.invert(detected.astype(bool)).astype(int)
+    sens.is_detected = np.array([int(np.any(np.isclose(params[:,0], Ps[i], rtol=.02)))
+                                 for i in range(Ps.size)])
+    assert sens.is_detected.size == sens.params_true.shape[0]
+    sens.is_FP = np.array([int(np.invert(np.any(np.isclose(sens.params_guess[i,0],Ps,rtol=.02))))
+                           for i in range(sens.params_guess.shape[0])])
+    assert sens.is_FP.size == sens.params_guess.shape[0]
     sens.paramsFP_guess = sens.params_guess[sens.is_FP.astype(bool)]
     sens.pickleobject()
 
@@ -363,6 +366,8 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
     Ps, rps, detected = np.zeros(0), np.zeros(0), np.zeros(0)
     for i in range(Nfolders):
  	print float(i)/Nfolders
+        assert Ps.size == rps.size
+        assert Ps.size == detected.size
 	sens = loadpickle(folders[i])
 	try:
 	    _ = getattr(sens, 'is_detected')
