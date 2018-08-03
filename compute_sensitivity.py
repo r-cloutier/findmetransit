@@ -362,19 +362,46 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
     Nfolders = folders.size
     assert Nfolders > 0
 
-    # get variables and detections
+    # get planet/stellar variables and detections
     Ps, rps, detected = np.zeros(0), np.zeros(0), np.zeros(0)
+    Rss, Mss, Teffs, Tmags = np.zeros(0), np.zeros(0), \
+                             np.zeros(0), np.zeros(0)
+    foldersdet = np.zeros(0)
+    PsFP, rpsFP = np.zeros(0), np.zeros(0)
+    RsFP, MsFP, TeffFP, TmagFP = np.zeros(0), np.zeros(0), \
+                                 np.zeros(0), np.zeros(0)
+    foldersFP = np.zeros(0)
     for i in range(Nfolders):
  	print float(i)/Nfolders
         assert Ps.size == rps.size
         assert Ps.size == detected.size
 	sens = loadpickle(folders[i])
-	try:
-	    _ = getattr(sens, 'is_detected')
+	if sens.DONE:
+            # get injected planet parameters
+            foldersdet = np.append(foldersdet, folders[i])
 	    Ps = np.append(Ps, sens.params_true[:,0])
             rps = np.append(rps, sens.rps)
             detected = np.append(detected, sens.is_detected)
-	except AttributeError:
+
+            # get stellar parameters
+            Rss = np.append(Rss, sens.Rs)
+            Mss = np.append(Mss, sens.Ms)
+            Teffs = np.append(Teffs, sens.Teff)
+            Tmags = np.append(Tmags, sens.Tmag)
+
+            # get false positive parameters
+            NFPs = sens.paramsFP_guess.size
+            for i in range(NFPs):
+                foldersFP = np.append(foldersFP, folders[i])
+                PsFP = np.append(PsFP, sens.paramsFP_guess[i,0])
+                rp = rvs.m2Rearth(rvs.Rsun2m(np.sqrt(sens.paramsFP_guess[i,2])*sens.Rs))
+                rpsFP = np.append(rpsFP, rp)
+                RsFP = np.append(RsFP, sens.Rs)
+                MsFP = np.append(MsFP, sens.Ms)
+                TeffFP = np.append(TeffFP, sens.Teff)
+                TmagFP = np.append(TmagFP, sens.Tmag)
+
+	else:
 	    pass
 
     assert Ps.size == rps.size
