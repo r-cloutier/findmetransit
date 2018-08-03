@@ -406,9 +406,13 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
 
     assert Ps.size == rps.size
     assert Ps.size == detected.size
-    save_fits(Ps, 'Results/%s_Ps'%prefix)
-    save_fits(rps, 'Results/%s_rps'%prefix)
-    save_fits(detected, 'Results/%s_detected'%prefix)
+    sensgrid = Sensitivity_grid(prefix)
+    sensgrid.foldersdet, sensgrid.Ps, sensgrid.rps, sensgrid.detected = foldersdet, Ps, \
+                                                                        rps, detected
+    sensgrid.Rss, sensgrid.Mss, sensgrid.Teffs, sensgrid.Tmags = Rss, Mss, Teffs, Tmags 
+    sensgrid.foldersFP, sensgrid.PsFP, sensgrid.rpsFP = foldersFP, PsFP, rpsFP
+    sensgrid.RsFP, sensgrid.MsFP, sensgrid.TeffFP, sensgrid.TmagFP = RsFP, MsFP, \
+                                                                     TeffFP, TmagFP
 
     # get completeness
     Pgrid = np.logspace(np.log10(.5),np.log10(27.4),12)
@@ -420,24 +424,22 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
 	    g = (Ps >= Pgrid[i]) & (Ps <= Pgrid[i+1]) & \
 		(rps >= rpgrid[j]) & (rps <= rpgrid[j+1])
 	    Ndet[i,j], Ntrue[i,j] = float(detected[g].sum()), detected[g].size
-    completeness = Ndet / Ntrue
 
-    # save fits
-    save_fits(Pgrid, 'Results/%s_Pgrid'%prefix)
-    save_fits(rpgrid, 'Results/%s_rpgrid'%prefix)
-    save_fits(Ndet, 'Results/%s_Ndet'%prefix)
-    save_fits(Ntrue, 'Results/%s_Ntrue'%prefix)
-
+    # save grids
+    sensgrid.Pgrid, sensgrid.Pgrid = Pgrid, rpgrid
+    sensgrid.Ndet, sensgrid.Ntrue, sensgrid.sensitivity = Ndet, Ntrue, Ndet/Ntrue
+    sensgrid.pickleobject()
+    
     # plot grid
     if pltt:
 	plt.figure()
-	plt.pcolormesh(Pgrid, rpgrid, completeness.T, 
+	plt.pcolormesh(Pgrid, rpgrid, (Ndet/Ntrue).T, 
 		       cmap=truncate_colormap(plt.get_cmap('bone_r'),.1,1),
 		        vmin=0, vmax=1)
 	plt.colorbar()
 	plt.xlim((Pgrid.min(),Pgrid.max())), plt.ylim((rpgrid.min(),rpgrid.max()))
 	plt.xscale('log'), plt.yscale('log')
-	plt.xlabel('Period [days]'), plt.ylabel('rp')
+	plt.xlabel('Period [days]'), plt.ylabel('r$_p$ [R$_{\oplus}$')
 	plt.show()
 
 

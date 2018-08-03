@@ -95,3 +95,17 @@ class Sensitivity:
         fObj = open('%s/Sensitivity_class'%self.fname_full, 'wb')
         pickle.dump(self, fObj)
         fObj.close()
+
+
+
+class Sensitivity_grid:
+
+    def __init__(self, prefix):
+        self.prefix = prefix
+	self.fname_full = 'Results/%s'%prefix
+    	self.pickleobject()
+
+    def pickleobject(self):
+        fObj = open('%s_SensitivityGrid'%self.fname_full, 'wb')
+        pickle.dump(self, fObj)
+        fObj.close()
