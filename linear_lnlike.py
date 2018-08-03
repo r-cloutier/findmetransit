@@ -1,7 +1,8 @@
 from imports import *
 from scipy.optimize import curve_fit
 import vetting as vett
-import rvs, mcmc1
+import rvs, mcmc1, batman
+from scipy.interpolate import LinearNDInterpolator as lint
 
 global dispersion_sig, depth_sig
 dispersion_sig, depth_sig = 1.5, 1.5
@@ -308,7 +309,7 @@ def identify_transit_candidates(sens, Ps, T0s, Ds, Zs, lnLs, Ndurations, Rs,
 
     # identify bona-fide transit-like events
     sens.params_guess_priorto_confirm = params
-    params, cond1, cond2 = confirm_transits(params, bjd, fcorr, ef)
+    params, cond1, cond2 = confirm_transits(params, bjd, fcorr, ef, sens.Ms, sens.Rs, sens.Teff)
     sens.transit_condition_scatterin_gtr_scatterout = cond1
     sens.transit_condition_depth_gtr_rms = cond2
 
@@ -330,14 +331,65 @@ def identify_transit_candidates(sens, Ps, T0s, Ds, Zs, lnLs, Ndurations, Rs,
         params, EBparams, maybeEBparams
 
 
-def _optimize_box_transit(theta, bjd, fcorr, ef):
-    assert len(theta) == 4
-    #P, T0, depth, duration = theta
-    popt,_ = curve_fit(box_transit_model_curve_fit, bjd, fcorr, p0=theta, sigma=ef, absolute_sigma=True)
-    return popt
+#def _optimize_box_transit(theta, bjd, fcorr, ef):
+#    assert len(theta) == 4
+#    #P, T0, depth, duration = theta
+#    popt,_ = curve_fit(box_transit_model_curve_fit, bjd, fcorr, p0=theta, sigma=ef, absolute_sigma=True)
+#    return popt
+
+def _get_LDcoeffs(Ms, Rs, Teff, Z=0):
+    '''Interpolate Claret 2017 grid of limb darkening coefficients to a
+    given star.'''
+    # get LD coefficient grid (Z is always 0 for some reason)
+    clarlogg, clarTeff, clarZ, clar_a, clar_b = \
+                                    np.loadtxt('LDcoeffs/claret17.tsv',
+                                               delimiter=';', skiprows=37).T
+
+    # interpolate to get the stellar LD coefficients
+    logg = np.log10(6.67e-11*rvs.Msun2kg(Ms)*1e2 / rvs.Rsun2m(Rs)**2)
+    lint_a = lint(np.array([clarTeff,clarlogg]).T, clar_a)
+    lint_b = lint(np.array([clarTeff,clarlogg]).T, clar_b)
+
+    return float(lint_a(Teff,logg)), float(lint_b(Teff,logg))
 
 
-def confirm_transits(params, bjd, fcorr, ef):
+def transit_model_func_curve_fit(P, T0, u1, u2):
+    def transit_model_func_in(bjd, aRs, rpRs, inc):
+        p = batman.TransitParams()
+        p.t0, p.per, p.rp = 0., 1., rpRs
+        p.a, p.inc, p.ecc = aRs, inc, 0.
+        p.w, p.limb_dark, p.u = 90., 'quadratic', [u1,u2]
+        phase = foldAt(bjd, P, T0)
+        m = batman.TransitModel(p, phase)
+        f = m.light_curve(p)
+        return f
+    return transit_model_func_in
+
+
+def _fit_params(params, bjd, fcorr, ef, Ms, Rs, Teff):
+    '''Get best-fit parameters.'''
+    assert params.shape == (4,)
+    P, T0, depth, duration = params
+    u1, u2 = _get_LDcoeffs(Ms, Rs, Teff)
+    aRs = rvs.AU2m(rvs.semimajoraxis(P,Ms,0)) / rvs.Rsun2m(Rs)
+    rpRs = np.sqrt(depth)
+    p0 = aRs, rpRs, 90.
+    bnds = ((aRs*.9, 0, float(rvs.inclination(P,Ms,Rs,1.1))),
+            (aRs*1.1, 1, float(rvs.inclination(P,Ms,Rs,-1.1))))
+    try:
+        popt,_ = curve_fit(transit_model_func_curve_fit(P,T0,u1,u2),
+                           bjd, fcorr, p0=p0, sigma=ef,
+                           absolute_sigma=True, bounds=bnds)
+        aRs, rpRs, inc = popt
+        depth = rpRs**2
+        b = rvs.impactparam_inc(P, Ms, Rs, inc)
+        duration = P/(np.pi*aRs) * np.sqrt((1+np.sqrt(depth))**2 - b*b)
+        return P, T0, depth, duration
+    except RuntimeError:
+        return params
+
+
+def confirm_transits(params, bjd, fcorr, ef, Ms, Rs, Teff):
     '''Look at proposed transits and confirm whether or not a significant 
     dimming is seen.'''
     Ntransits = params.shape[0]
@@ -354,7 +406,7 @@ def confirm_transits(params, bjd, fcorr, ef):
 	#				   bjd, fcorr, ef, initialize, a=1.9)
 	#results = mcmc1.get_results(samples)
 	# get optimized parameters for this transit
-	paramsout[i] = _optimize_box_transit(params[i], bjd, fcorr, ef)
+	paramsout[i] = _fit_params(params[i], bjd, fcorr, ef, Ms, Rs, Teff)
 	P, T0, depth, duration = paramsout[i]
 
 	# get in and out of transit window
