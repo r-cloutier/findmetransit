@@ -13,11 +13,15 @@ global medTmag, medTeff, medRs
 medTmag, medTeff, medRs = 10.5, 3400, 0.33
 
 
-def rescale_rms(mag):
+def rescale_rms(mag, rmsfloor=6e-5):
     # get values from simulated TESS LC (rms is scatter not mean ef)
-    rms0, mag0 = 0.0017390130051, 8.02999973
+    # should have 200 pm rms for I_C=10
+    #rms0, mag0 = 0.0017390130051, 8.02999973
+    rms0, mag0 = 2e-4, 10  # ppm and I_cousins band
     flux_ratio = 10**(-.4*(mag0-mag))
-    return rms0 * np.sqrt(flux_ratio)
+    rmsout = rms0 * np.sqrt(flux_ratio)
+    rmsout[rmsout<rmsfloor] = rmsfloor
+    return rmsout 
 
 
 def get_timeseries(mag, Teff, Rs, Ms, Ps, rpRss, add_systematic=True,
@@ -37,7 +41,7 @@ def get_timeseries(mag, Teff, Rs, Ms, Ps, rpRss, add_systematic=True,
     bjd = bjd[g]
     
     # get uncertainties
-    rms = rescale_rms(mag)
+    rms = float(rescale_rms(mag))
     ef = np.repeat(rms, bjd.size)
 
     # add planet models
@@ -501,7 +505,7 @@ if __name__ == '__main__':
     #Tmag_fullsky = np.repeat(Tmag,12)  # Tmag only covers 1/12 of the sky
     #plt.hist(Tmag_fullsky, bins=1000, log=True, histtype='step', cumulative=True), plt.axhline(1e4), plt.show()
     Tmag, Teff, Rs, Ms = np.loadtxt('CTL/CTL_RC.dat', delimiter=',').T
-    g = (Tmag < 11.1) & (Teff<4e3)
+    g = (Tmag < 11.1) & (Teff<=4e3)
     Tmag, Teff, Rs, Ms = Tmag[g], Teff[g], Rs[g], Ms[g]
 
     # for this planet sample
