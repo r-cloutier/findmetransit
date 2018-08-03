@@ -224,8 +224,15 @@ def remove_multiple_on_lnLs(bjd, Ps, T0s, Ds, Zs, lnLs, dP=.1):
     to_remove = np.zeros(0)
     for i in range(Ps.size):
 	Ntransits = int((bjd.max()-bjd.min()) / Ps[i])
-	for j in range(2,Ntransits+1):
+	lim = Ntransits+1 if Ntransits+1 > 2 else 3
+	for j in range(2,lim):
+	    # check positive multiples
 	    isclose = np.isclose(Ps, Ps[i]*j, atol=dP*2)
+	    if np.any(isclose):
+		iscloselnL = lnLs[isclose] <= lnLs[i]
+		to_remove = np.append(to_remove, Ps[isclose][iscloselnL])
+	    # check inverse multiples
+	    isclose = np.isclose(Ps, Ps[i]/float(j), atol=dP*2)
 	    if np.any(isclose):
 		iscloselnL = lnLs[isclose] <= lnLs[i]
 		to_remove = np.append(to_remove, Ps[isclose][iscloselnL])
@@ -241,6 +248,10 @@ def remove_multiple_on_lnLs(bjd, Ps, T0s, Ds, Zs, lnLs, dP=.1):
 
 
 def remove_multiples(bjd, Ps, T0s, Ds, Zs, lnLs, dP=.1):
+    assert Ps.size == T0s.size
+    assert Ps.size == Ds.size
+    assert Ps.size == Zs.size
+    assert Ps.size == lnLs.size
     to_remove = np.zeros(0)
     for i in range(Ps.size):
         if Ps[i] not in to_remove:
@@ -314,8 +325,9 @@ def identify_transit_candidates(sens, Ps, T0s, Ds, Zs, lnLs, Ndurations, Rs,
     sens.transit_condition_depth_gtr_rms = cond2
 
     # re-remove multiple transits based on refined parameters
-    p,t0,d,z,_ = remove_multiples(bjd, params[:,0], params[:,1], params[:,3], 
-				  params[:,2], np.zeros(params[:,0].size))
+    lnLOIsin = lnLOIs_final[np.in1d(POIs_final, params[:,0])]
+    p,t0,d,z,_ = remove_multiple_on_lnLs(bjd, params[:,0], params[:,1], 
+					 params[:,3], params[:,2], lnLOIsin)
     params = np.array([p,t0,z,d]).T
 
     # try to identify EBs
