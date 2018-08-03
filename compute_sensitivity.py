@@ -22,7 +22,7 @@ def rescale_rms(mag, rmsfloor=6e-5):
     #g = (Tmags < 11.1) & (Teffs <= 4e3)
     #popt,_ = curve_fit(_powerlawfunc, Tmags[g], sig[g], p0=(1e-10,6))
     #assert _powerlawfunc(Tmags[g], *popt).min() >= rmsfloor
-    popt = np.array([1.77126381e-12, 8.07867123e+00]) # save time
+    popt = np.array([1.77126381e-12, 8.07867123e+00]) # skip the above steps to some save time
     # return fit value at the input TESS magnitude
     return _powerlawfunc(mag, *popt)
 
