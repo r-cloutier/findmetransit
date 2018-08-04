@@ -365,6 +365,15 @@ def compute_sensitivity(fname, Ps, rpRss, Tmag, Rs, Ms, Teff,
     sens.pickleobject()
 
 
+def _compute_insolation(Ps, Ms, Rs, Teff):
+    '''Return the insolation in Earth units'''
+    sigma = 5.67e-8
+    L = 4*np.pi*rvs.Rsun2m(Rs)**2 * sigma*Teff**4
+    Ps = np.ascontiguousarray(Ps)
+    smas = rvs.AU2m(rvs.semimajoraxis(Ps, Ms, 0))
+    return L / (4*np.pi*smas**2) / 1367
+
+
 def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
     '''Get the completeness as a function of P & rp/Rs for a set of sensitivity
     calculations'''
@@ -374,7 +383,8 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
     assert Nfolders > 0
 
     # get planet/stellar variables and detections
-    Ps, rps, detected = np.zeros(0), np.zeros(0), np.zeros(0)
+    Ps, Fs, rps, detected = np.zeros(0), np.zeros(0), \
+			    np.zeros(0), np.zeros(0)
     Rss, Mss, Teffs, Tmags = np.zeros(0), np.zeros(0), \
                              np.zeros(0), np.zeros(0)
     foldersdet = np.zeros(0)
@@ -391,7 +401,10 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
             # get injected planet parameters
             foldersdet = np.append(foldersdet, folders[i])
 	    Ps = np.append(Ps, sens.params_true[:,0])
-            rps = np.append(rps, sens.rps)
+            Fs = np.append(Fs, _compute_insolation(sens.params_true[:,0],
+						   sens.Ms, sens.Rs, 
+						   sens.Teff))
+	    rps = np.append(rps, sens.rps)
             detected = np.append(detected, sens.is_detected)
 
             # get stellar parameters
