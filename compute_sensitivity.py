@@ -401,7 +401,7 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
             Tmags = np.append(Tmags, sens.Tmag)
 
             # get false positive parameters
-            NFPs = sens.paramsFP_guess.size
+            NFPs = sens.paramsFP_guess.shape[0]
             for i in range(NFPs):
                 foldersFP = np.append(foldersFP, folders[i])
                 PsFP = np.append(PsFP, sens.paramsFP_guess[i,0])
