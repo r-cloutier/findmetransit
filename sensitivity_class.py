@@ -1,6 +1,6 @@
-import numpy as np
-import glob, os
-import cPickle as pickle
+from imports import *
+from truncate_cmap import *
+
 
 def loadpickle(fname):
     fObj = open(fname, 'rb')
@@ -107,6 +107,37 @@ class Sensitivity_grid:
 	self.fname_full = 'Results/%s'%prefix
     	self.pickleobject()
 
+        
+    def plot_sensitivity(self, pltt=True, label=False):
+        fig = plt.figure(figsize=(5.5,4.7))
+        ax = fig.add_subplot(111)
+        self.sensitivity = self.Ndet / self.Ntrue
+        cax = ax.pcolormesh(self.Pgrid, self.rpgrid, self.sensitivity.T,
+                            cmap=truncate_colormap(plt.get_cmap('rainbow'),0,1),
+                            vmin=0, vmax=1)
+        cbar_axes = fig.add_axes([.08,.1,.84,.04])
+        cbar = fig.colorbar(cax, cax=cbar_axes, orientation='horizontal')
+        #cbar.ax.set_xticklabels(cticklabels)
+        cbar.set_label('Detection Sensitivity', labelpad=.1)
+        ax.axvline(self.Pgrid.max()/2, ls='--', c='k'),
+        ax.axvline(self.Pgrid.max()/3, ls='--', c='k')
+        ax.set_xlim((self.Pgrid.min(),self.Pgrid.max())),
+        ax.set_ylim((self.rpgrid.min(),self.rpgrid.max()))
+        ax.set_xscale('log'), ax.set_yscale('log')
+        ax.set_xlabel('Period [days]'), ax.set_ylabel('r$_p$ [R$_{\oplus}$]')
+
+	fig.subplots_adjust(bottom=.26, left=.14, right=.96, top=.97)
+	if label:
+	    try:
+		os.mkdir('plots')
+	    except OSError:
+		pass
+	    plt.savefig('plots/sensgrid_%s.png'%self.prefix)
+        if pltt:
+            plt.show()
+        plt.close('all')
+
+        
     def pickleobject(self):
         fObj = open('%s_SensitivityGrid'%self.fname_full, 'wb')
         pickle.dump(self, fObj)
