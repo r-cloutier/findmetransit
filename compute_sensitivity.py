@@ -437,7 +437,7 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
 	    Ndet[i,j], Ntrue[i,j] = float(detected[g].sum()), detected[g].size
 
     # save grids
-    sensgrid.Pgrid, sensgrid.Pgrid = Pgrid, rpgrid
+    sensgrid.Pgrid, sensgrid.rpgrid = Pgrid, rpgrid
     sensgrid.Ndet, sensgrid.Ntrue, sensgrid.sensitivity = Ndet, Ntrue, Ndet/Ntrue
     sensgrid.pickleobject()
     
