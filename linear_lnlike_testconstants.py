@@ -4,8 +4,9 @@ import vetting as vett
 import rvs, mcmc1, batman
 from scipy.interpolate import LinearNDInterpolator as lint
 
-global dispersion_sig, depth_sig
-dispersion_sig, depth_sig = 2.1, 1.5
+#global dispersion_sig, depth_sig TEMP
+#dispersion_sig, depth_sig = 2.1, 1.5
+#dispersion_sig, depth_sig = 1.5, 1.5
 
 def lnlike(bjd, f, ef, fmodel):
     return -.5*(np.sum((f-fmodel)**2 / ef**2 - np.log(1./ef**2)))
@@ -401,7 +402,7 @@ def _fit_params(params, bjd, fcorr, ef, Ms, Rs, Teff):
         return params
 
 
-def confirm_transits(params, bjd, fcorr, ef, Ms, Rs, Teff):
+def confirm_transits(params, bjd, fcorr, ef, Ms, Rs, Teff, dispersion_sig, depth_sig): # TEMP
     '''Look at proposed transits and confirm whether or not a significant 
     dimming is seen.'''
     Ntransits = params.shape[0]
