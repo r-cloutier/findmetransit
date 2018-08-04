@@ -379,6 +379,7 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
     calculations'''
     # get folders
     folders = np.array(glob.glob('Results/%s*/Sensitivity_class'%prefix))
+    Nplanets = loadpickle(folders[0]).params_true.shape[0]
     Nfolders = folders.size
     assert Nfolders > 0
 
@@ -399,7 +400,7 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
 	sens = loadpickle(folders[i])
 	if sens.DONE:
             # get injected planet parameters
-            foldersdet = np.append(foldersdet, folders[i])
+            foldersdet = np.append(foldersdet, np.repeat(folders[i],Nplanets))
 	    Ps = np.append(Ps, sens.params_true[:,0])
             Fs = np.append(Fs, _compute_insolation(sens.params_true[:,0],
 						   sens.Ms, sens.Rs, 
@@ -408,10 +409,10 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
             detected = np.append(detected, sens.is_detected)
 
             # get stellar parameters
-            Rss = np.append(Rss, sens.Rs)
-            Mss = np.append(Mss, sens.Ms)
-            Teffs = np.append(Teffs, sens.Teff)
-            Tmags = np.append(Tmags, sens.Tmag)
+            Rss = np.append(Rss, np.repeat(sens.Rs,Nplanets))
+            Mss = np.append(Mss, np.repeat(sens.Ms,Nplanets))
+            Teffs = np.append(Teffs, np.repeat(sens.Teff,Nplanets))
+            Tmags = np.append(Tmags, np.repeat(sens.Tmag,Nplanets))
 
             # get false positive parameters
             NFPs = sens.paramsFP_guess.shape[0]
@@ -433,25 +434,36 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
     sensgrid = Sensitivity_grid(prefix)
     sensgrid.foldersdet, sensgrid.Ps, sensgrid.rps, sensgrid.detected = foldersdet, Ps, \
                                                                         rps, detected
+    sensgrid.Fs = Fs
     sensgrid.Rss, sensgrid.Mss, sensgrid.Teffs, sensgrid.Tmags = Rss, Mss, Teffs, Tmags 
     sensgrid.foldersFP, sensgrid.PsFP, sensgrid.rpsFP = foldersFP, PsFP, rpsFP
     sensgrid.RsFP, sensgrid.MsFP, sensgrid.TeffFP, sensgrid.TmagFP = RsFP, MsFP, \
                                                                      TeffFP, TmagFP
 
-    # get completeness
+    # get sensitivity over P,rp and F,rp grids
     Pgrid = np.logspace(np.log10(.5),np.log10(27.4),12)
     rpgrid = np.logspace(np.log10(.5),np.log10(15),9)
-    Ndet, Ntrue = np.zeros((Pgrid.size-1, rpgrid.size-1)), \
-		  np.zeros((Pgrid.size-1, rpgrid.size-1))
+    NdetP, NtrueP = np.zeros((Pgrid.size-1, rpgrid.size-1)), \
+		    np.zeros((Pgrid.size-1, rpgrid.size-1))
     for i in range(Pgrid.size-1):
 	for j in range(rpgrid.size-1):
 	    g = (Ps >= Pgrid[i]) & (Ps <= Pgrid[i+1]) & \
 		(rps >= rpgrid[j]) & (rps <= rpgrid[j+1])
-	    Ndet[i,j], Ntrue[i,j] = float(detected[g].sum()), detected[g].size
+	    NdetP[i,j], NtrueP[i,j] = float(detected[g].sum()), detected[g].size
+
+    Fgrid = np.logspace(np.log10(.5),3,12)
+    NdetF, NtrueF = np.zeros((Fgrid.size-1, rpgrid.size-1)), \
+                    np.zeros((Fgrid.size-1, rpgrid.size-1))
+    for i in range(Fgrid.size-1):
+        for j in range(rpgrid.size-1):
+            g = (Fs >= Fgrid[i]) & (Fs <= Fgrid[i+1]) & \
+                (rps >= rpgrid[j]) & (rps <= rpgrid[j+1])
+            NdetF[i,j], NtrueF[i,j] = float(detected[g].sum()), detected[g].size
 
     # save grids
-    sensgrid.Pgrid, sensgrid.rpgrid = Pgrid, rpgrid
-    sensgrid.Ndet, sensgrid.Ntrue, sensgrid.sensitivity = Ndet, Ntrue, Ndet/Ntrue
+    sensgrid.Pgrid, sensgrid.rpgrid, sensgrid.Fgrid = Pgrid, rpgrid, Fgrid
+    sensgrid.NdetP, sensgrid.NtrueP, sensgrid.sensitivityP = NdetP, NtrueP, NdetP/NtrueP
+    sensgrid.NdetF, sensgrid.NtrueF, sensgrid.sensitivityF = NdetF, NtrueF, NdetF/NtrueF
     sensgrid.pickleobject()
     
     # plot grid

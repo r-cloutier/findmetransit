@@ -108,23 +108,32 @@ class Sensitivity_grid:
     	self.pickleobject()
 
         
-    def plot_sensitivity(self, pltt=True, label=False):
+    def plot_sensitivity(self, Pgrid=True, pltt=True, label=False):
+ 	if Pgrid:
+	    xarr, zarr = self.Pgrid, self.sensitivityP
+	    xlabel = 'Period [days]'
+	else:
+            xarr, zarr = self.Fgrid, self.sensitivityF
+	    xlabel = 'Insolation [S$_{\oplus}$]'
+
         fig = plt.figure(figsize=(5.5,4.7))
         ax = fig.add_subplot(111)
-        self.sensitivity = self.Ndet / self.Ntrue
-        cax = ax.pcolormesh(self.Pgrid, self.rpgrid, self.sensitivity.T,
+        cax = ax.pcolormesh(xarr, self.rpgrid, zarr.T,
                             cmap=truncate_colormap(plt.get_cmap('rainbow'),0,1),
                             vmin=0, vmax=1)
         cbar_axes = fig.add_axes([.08,.1,.84,.04])
         cbar = fig.colorbar(cax, cax=cbar_axes, orientation='horizontal')
         #cbar.ax.set_xticklabels(cticklabels)
         cbar.set_label('Detection Sensitivity', labelpad=.1)
-        ax.axvline(self.Pgrid.max()/2, ls='--', c='k'),
-        ax.axvline(self.Pgrid.max()/3, ls='--', c='k')
-        ax.set_xlim((self.Pgrid.min(),self.Pgrid.max())),
+	if Pgrid:
+            ax.axvline(self.Pgrid.max()/2, ls='--', c='k')
+            ax.axvline(self.Pgrid.max()/3, ls='--', c='k')
+            ax.set_xlim((self.Pgrid.min(),self.Pgrid.max()))
+	else:
+	    ax.set_xlim((self.Fgrid.max(),self.Fgrid.min()))
         ax.set_ylim((self.rpgrid.min(),self.rpgrid.max()))
         ax.set_xscale('log'), ax.set_yscale('log')
-        ax.set_xlabel('Period [days]'), ax.set_ylabel('r$_p$ [R$_{\oplus}$]')
+        ax.set_xlabel(xlabel), ax.set_ylabel('r$_p$ [R$_{\oplus}$]')
 
 	fig.subplots_adjust(bottom=.26, left=.14, right=.96, top=.97)
 	if label:
