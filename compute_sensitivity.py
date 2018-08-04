@@ -413,13 +413,13 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
             Mss = np.append(Mss, np.repeat(sens.Ms,Nplanets))
             Teffs = np.append(Teffs, np.repeat(sens.Teff,Nplanets))
             Tmags = np.append(Tmags, np.repeat(sens.Tmag,Nplanets))
-
+            
             # get false positive parameters
             NFPs = sens.paramsFP_guess.shape[0]
-            for i in range(NFPs):
+            for j in range(NFPs):
                 foldersFP = np.append(foldersFP, folders[i])
-                PsFP = np.append(PsFP, sens.paramsFP_guess[i,0])
-                rp = rvs.m2Rearth(rvs.Rsun2m(np.sqrt(sens.paramsFP_guess[i,2])*sens.Rs))
+                PsFP = np.append(PsFP, sens.paramsFP_guess[j,0])
+                rp = rvs.m2Rearth(rvs.Rsun2m(np.sqrt(sens.paramsFP_guess[j,2])*sens.Rs))
                 rpsFP = np.append(rpsFP, rp)
                 RsFP = np.append(RsFP, sens.Rs)
                 MsFP = np.append(MsFP, sens.Ms)
@@ -431,6 +431,8 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
 
     assert Ps.size == rps.size
     assert Ps.size == detected.size
+    assert PsFP.size == rpsFP.size
+    assert PsFP.size == MsFP.size
     sensgrid = Sensitivity_grid(prefix)
     sensgrid.foldersdet, sensgrid.Ps, sensgrid.rps, sensgrid.detected = foldersdet, Ps, \
                                                                         rps, detected
