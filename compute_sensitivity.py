@@ -37,13 +37,17 @@ def get_timeseries(mag, Teff, Rs, Ms, Ps, rpRss, add_systematic=True,
     fname = 'tess2019128220341-0000000005712108-0016-s_lc.fits'
     hdu = download_one_fits(fname)
     hdr, bjdorig,_,_ = get_lc(hdu)
-    # extend to longer baselines (i.e. more than 27 days)
-    dt = 2.  # min
+    bjdorig = bjdorig[:19845]  # trim second jump from data transfer 
+    # extend to longer baselines (i.e. more than 27 days) but include gaps at ~14 days for data transfer
+    dt = 392./60/24  # days
     bjd = bjdorig + 0
+    bjd2add = bjdorig[:9990]  # up to the gap at ~14 days
     assert 27 <= Ndays_field <= 351
-    N_to_extend_baseline = int(Ndays_field/27.)
+    N_to_extend_baseline = 2*int(Ndays_field/27)
+    print N_to_extend_baseline
     for i in range(N_to_extend_baseline):
-    	bjd = np.append(bjd, bjdorig+(bjd.max()-bjdorig.min())+dt)    
+    	bjd = np.append(bjd, bjd2add+(bjd.max()-bjd2add.min())+dt)
+	print bjd.max()
     g = (bjd-bjd.min() <= Ndays_field)
     bjd = bjd[g]
     
