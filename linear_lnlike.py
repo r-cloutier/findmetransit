@@ -5,7 +5,7 @@ import rvs, mcmc1, batman
 from scipy.interpolate import LinearNDInterpolator as lint
 
 global dispersion_sig, depth_sig
-dispersion_sig, depth_sig = 2.1, 1.5
+dispersion_sig, depth_sig = 3., 3.
 
 def lnlike(bjd, f, ef, fmodel):
     return -.5*(np.sum((f-fmodel)**2 / ef**2 - np.log(1./ef**2)))
@@ -447,7 +447,6 @@ def confirm_transits(params, bjd, fcorr, ef, Ms, Rs, Teff):
     # remove false transits
     paramsout = np.delete(paramsout, to_remove_inds, 0)
 
-    print dispersion_sig, depth_sig
     return paramsout, transit_condition_scatterin_gtr_scatterout, transit_condition_depth_gtr_rms
 
 
