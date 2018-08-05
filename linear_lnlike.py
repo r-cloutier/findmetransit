@@ -280,11 +280,22 @@ def identify_transit_candidates(sens, Ps, T0s, Ds, Zs, lnLs, Ndurations, Rs,
     assert Ps.size == Zs.size
     assert Ps.size == lnLs.size
 
+    # get optimized parameters to get more precise Ps and T0s which will help 
+    # when removing multiples
+    Ps2, T0s2, Ds2, Zs2 = np.zeros_like(Ps), np.zeros_like(Ps), \
+		      	  np.zeros_like(Ps), np.zeros_like(Ps)
+    lnLs2 = np.zeros_like(Ps)
+    for i in range(Ps.size):
+	params = Ps[i], T0s[i], Zs[i], Ds[i]
+        Ps2[i], T0s2[i], Zs2[i], Ds2[i], fmodel = _fit_params(params, bjd, fcorr, ef, 
+						              sens.Ms, sens.Rs, sens.Teff)
+	lnLs2[i] = lnlike(bjd, fcorr, ef, fmodel)
+
     # remove common periods based on maximum likelihood 
     dP = .1
-    sort = np.argsort(Ps)
-    POIs, T0OIs, DOIs, ZOIs, lnLOIs = Ps[sort], T0s[sort], Ds[sort], Zs[sort], \
-                                      lnLs[sort]
+    sort = np.argsort(Ps2)
+    POIs, T0OIs, DOIs, ZOIs, lnLOIs = Ps2[sort], T0s2[sort], Ds2[sort], Zs2[sort], \
+                                      lnLs2[sort]
     POIs_red, T0OIs_red, DOIs_red, ZOIs_red, lnLOIs_red = np.zeros(0), \
                                                           np.zeros(0), \
 							  np.zeros(0), \
@@ -317,6 +328,9 @@ def identify_transit_candidates(sens, Ps, T0s, Ds, Zs, lnLs, Ndurations, Rs,
 
     # remove duplicates
     params = params[np.unique(params[:,0], return_index=True)[1]]
+
+    # do not consider too many planets to reduce FPs
+    params = trim_planets(params, lnLOIs_final[g])
 
     # identify bona-fide transit-like events
     sens.params_guess_priorto_confirm = params
@@ -365,8 +379,8 @@ def _get_LDcoeffs(Ms, Rs, Teff, Z=0):
     return float(lint_a(Teff,logg)), float(lint_b(Teff,logg))
 
 
-def transit_model_func_curve_fit(P, T0, u1, u2):
-    def transit_model_func_in(bjd, aRs, rpRs, inc):
+def transit_model_func_curve_fit(u1, u2):
+    def transit_model_func_in(bjd, P, T0, aRs, rpRs, inc):
         p = batman.TransitParams()
         p.t0, p.per, p.rp = 0., 1., rpRs
         p.a, p.inc, p.ecc = aRs, inc, 0.
@@ -385,21 +399,35 @@ def _fit_params(params, bjd, fcorr, ef, Ms, Rs, Teff):
     u1, u2 = _get_LDcoeffs(Ms, Rs, Teff)
     aRs = rvs.AU2m(rvs.semimajoraxis(P,Ms,0)) / rvs.Rsun2m(Rs)
     rpRs = np.sqrt(depth)
-    p0 = aRs, rpRs, 90.
-    bnds = ((aRs*.9, 0, float(rvs.inclination(P,Ms,Rs,1.1))),
-            (aRs*1.1, 1, float(rvs.inclination(P,Ms,Rs,-1.1))))
+    p0 = P, T0, aRs, rpRs, 90.
+    bnds = ((P*.9, T0-P*1.1, aRs*.9, 0, float(rvs.inclination(P,Ms,Rs,1.1))),
+            (P*1.1, T0+P*1.1, aRs*1.1, 1, float(rvs.inclination(P,Ms,Rs,-1.1))))
     try:
-        popt,_ = curve_fit(transit_model_func_curve_fit(P,T0,u1,u2),
+        popt,_ = curve_fit(transit_model_func_curve_fit(u1,u2),
                            bjd, fcorr, p0=p0, sigma=ef,
                            absolute_sigma=True, bounds=bnds)
-        aRs, rpRs, inc = popt
+        P, T0, aRs, rpRs, inc = popt
         depth = rpRs**2
         b = rvs.impactparam_inc(P, Ms, Rs, inc)
         duration = P/(np.pi*aRs) * np.sqrt((1+np.sqrt(depth))**2 - b*b)
-        return P, T0, depth, duration
+	func = transit_model_func_curve_fit(u1, u2)
+	fmodel = func(bjd, P, T0, aRs, rpRs, inc)
     except RuntimeError:
-        return params
+	func = transit_model_func_curve_fit(u1, u2)
+	fmodel = func(bjd, P, T0, aRs, rpRs, inc)
+    return P, T0, depth, duration, fmodel
 
+
+def trim_planets(params, lnLOIs, Nplanetsmax=5):
+    '''If there are too many planet candidates then remove some based on 
+    their lnLs. Most are FPs.'''
+    Nplanets = params.shape[0]
+    assert lnLOIs.size == Nplanets
+    if Nplanets > Nplanetsmax:
+	tokeep = np.sort(np.argsort(lnLOIs)[::-1][:Nplanetsmax])  # retain the same ordering
+	return params[sort][:Nplanetsmax]
+    else:
+	params
 
 def confirm_transits(params, bjd, fcorr, ef, Ms, Rs, Teff):
     '''Look at proposed transits and confirm whether or not a significant 
@@ -418,8 +446,8 @@ def confirm_transits(params, bjd, fcorr, ef, Ms, Rs, Teff):
 	#				   bjd, fcorr, ef, initialize, a=1.9)
 	#results = mcmc1.get_results(samples)
 	# get optimized parameters for this transit
-	paramsout[i] = _fit_params(params[i], bjd, fcorr, ef, Ms, Rs, Teff)
-	P, T0, depth, duration = paramsout[i]
+	P, T0, depth, duration,_ = _fit_params(params[i], bjd, fcorr, ef, Ms, Rs, Teff)
+	paramsout[i] = P, T0, depth, duration
 
 	# get in and out of transit window
         phase = foldAt(bjd, P, T0)
@@ -427,7 +455,7 @@ def confirm_transits(params, bjd, fcorr, ef, Ms, Rs, Teff):
 	Dfrac = .25   # fraction of the duration in-transit (should be <.5 to ignore ingress & egress)
         intransit = (phase*P >= -Dfrac*duration) & (phase*P <= Dfrac*duration)
 	outtransit = (phase*P <= -(1.+Dfrac)*duration) | (phase*P >= (1.+Dfrac)*duration)
-        ##plt.plot(phase, fcorr, 'ko', phase[intransit], fcorr[intransit], 'bo'), plt.show()
+        plt.plot(phase, fcorr, 'ko', phase[intransit], fcorr[intransit], 'bo'), plt.show()
 
         # check scatter in and out of the proposed transit to see if the transit is real
 	cond1 = np.median(fcorr[intransit]) <= np.median(fcorr[outtransit]) - dispersion_sig*MAD1d(fcorr[outtransit])
@@ -436,6 +464,7 @@ def confirm_transits(params, bjd, fcorr, ef, Ms, Rs, Teff):
 	depth = 1-np.median(fcorr[intransit])
 	sigdepth = np.median(ef[intransit])
 	cond2 = depth/sigdepth > depth_sig
+	print P, depth/sigdepth
   	#cond2 = (1-np.median(fcorr[intransit]) <= depth+depth_sig*sigdepth) & \
 	#   	(1-np.median(fcorr[intransit]) >= depth-depth_sig*sigdepth)
 	transit_condition_depth_gtr_rms[i] = cond2
