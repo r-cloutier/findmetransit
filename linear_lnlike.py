@@ -425,7 +425,7 @@ def trim_planets(params, lnLOIs, Nplanetsmax=5):
     assert lnLOIs.size == Nplanets
     if Nplanets > Nplanetsmax:
 	tokeep = np.sort(np.argsort(lnLOIs)[::-1][:Nplanetsmax])  # retain the same ordering
-	return params[sort][:Nplanetsmax]
+	return params[tokeep]
     else:
 	params
 
