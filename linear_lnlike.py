@@ -286,7 +286,7 @@ def identify_transit_candidates(sens, Ps, T0s, Ds, Zs, lnLs, Ndurations, Rs,
 		      	  np.zeros_like(Ps), np.zeros_like(Ps)
     lnLs2 = np.zeros_like(Ps)
     for i in range(Ps.size):
-	params = Ps[i], T0s[i], Zs[i], Ds[i]
+	params = np.array([Ps[i], T0s[i], Zs[i], Ds[i]])
         Ps2[i], T0s2[i], Zs2[i], Ds2[i], fmodel = _fit_params(params, bjd, fcorr, ef, 
 						              sens.Ms, sens.Rs, sens.Teff)
 	lnLs2[i] = lnlike(bjd, fcorr, ef, fmodel)
