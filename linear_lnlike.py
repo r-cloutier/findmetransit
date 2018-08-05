@@ -400,8 +400,9 @@ def _fit_params(params, bjd, fcorr, ef, Ms, Rs, Teff):
     aRs = rvs.AU2m(rvs.semimajoraxis(P,Ms,0)) / rvs.Rsun2m(Rs)
     rpRs = np.sqrt(depth)
     p0 = P, T0, aRs, rpRs, 90.
-    bnds = ((P*.9, T0-P*1.1, aRs*.9, 0, float(rvs.inclination(P,Ms,Rs,1.1))),
-            (P*1.1, T0+P*1.1, aRs*1.1, 1, float(rvs.inclination(P,Ms,Rs,-1.1))))
+    incs = np.array([float(rvs.inclination(P,Ms,Rs,1)), float(rvs.inclination(P,Ms,Rs,-1))])
+    bnds = ((P*.9, T0-P*1.1, aRs*.9, 0, incs.min()),
+            (P*1.1, T0+P*1.1, aRs*1.1, 1, incs.max()))
     try:
         popt,_ = curve_fit(transit_model_func_curve_fit(u1,u2),
                            bjd, fcorr, p0=p0, sigma=ef,

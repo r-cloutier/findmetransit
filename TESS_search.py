@@ -269,6 +269,11 @@ def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname,
                                                              transit_times,
                                                              durations, lnLs,
                                                              depths, SNRthresh)
+    # save here for debugging
+    sens.POIs, sens.T0OIs, sens.DOIs, sens.ZOIs, sens.lnLOIs = Ps, T0s, \
+                                                               Ds, Zs, \
+                                                               lnLs_transit
+    sens.pickleobject()
 
     print 'Finding transit-like events and making transit parameter guesses...\n'
     Rs = hdr['RADIUS']
