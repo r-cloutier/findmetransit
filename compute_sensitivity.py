@@ -44,10 +44,8 @@ def get_timeseries(mag, Teff, Rs, Ms, Ps, rpRss, add_systematic=True,
     bjd2add = bjdorig[:9990]  # up to the gap at ~14 days
     assert 27 <= Ndays_field <= 351
     N_to_extend_baseline = 2*int(Ndays_field/27)
-    print N_to_extend_baseline
     for i in range(N_to_extend_baseline):
     	bjd = np.append(bjd, bjd2add+(bjd.max()-bjd2add.min())+dt)
-	print bjd.max()
     g = (bjd-bjd.min() <= Ndays_field)
     bjd = bjd[g]
     
