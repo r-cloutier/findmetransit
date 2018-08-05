@@ -419,7 +419,7 @@ def _fit_params(params, bjd, fcorr, ef, Ms, Rs, Teff):
 	fmodel = func(bjd, P, T0, aRs, rpRs, inc)
     except RuntimeError:
 	func = transit_model_func_curve_fit(u1, u2)
-	fmodel = func(bjd, P, T0, aRs, rpRs, inc)
+	fmodel = func(bjd, P, T0, aRs, rpRs, 90.)
     return P, T0, depth, duration, fmodel
 
 
