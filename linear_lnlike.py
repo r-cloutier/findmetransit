@@ -280,6 +280,10 @@ def identify_transit_candidates(sens, Ps, T0s, Ds, Zs, lnLs, Ndurations, Rs,
     assert Ps.size == Zs.size
     assert Ps.size == lnLs.size
 
+    # remove negative entries (mostly negative depths)
+    g = (Ps>0) & (T0s>0) & (Ds>0) & (Zs>0)
+    Ps, T0s, Ds, Zs, lnLs = Ps[g], T0s[g], Ds[g], Zs[g], lnLs[g]
+
     # get optimized parameters to get more precise Ps and T0s which will help 
     # when removing multiples
     Ps2, T0s2, Ds2, Zs2 = np.zeros_like(Ps), np.zeros_like(Ps), \
