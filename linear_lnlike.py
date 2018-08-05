@@ -427,12 +427,13 @@ def trim_planets(params, lnLOIs, Nplanetsmax=5):
     '''If there are too many planet candidates then remove some based on 
     their lnLs. Most are FPs.'''
     Nplanets = params.shape[0]
+    assert params.shape == (Nplanets,4)
     assert lnLOIs.size == Nplanets
     if Nplanets > Nplanetsmax:
 	tokeep = np.sort(np.argsort(lnLOIs)[::-1][:Nplanetsmax])  # retain the same ordering
 	return params[tokeep]
     else:
-	params
+	return params
 
 def confirm_transits(params, bjd, fcorr, ef, Ms, Rs, Teff):
     '''Look at proposed transits and confirm whether or not a significant 
@@ -460,7 +461,7 @@ def confirm_transits(params, bjd, fcorr, ef, Ms, Rs, Teff):
 	Dfrac = .25   # fraction of the duration in-transit (should be <.5 to ignore ingress & egress)
         intransit = (phase*P >= -Dfrac*duration) & (phase*P <= Dfrac*duration)
 	outtransit = (phase*P <= -(1.+Dfrac)*duration) | (phase*P >= (1.+Dfrac)*duration)
-        plt.plot(phase, fcorr, 'ko', phase[intransit], fcorr[intransit], 'bo'), plt.show()
+        #plt.plot(phase, fcorr, 'ko', phase[intransit], fcorr[intransit], 'bo'), plt.show()
 
         # check scatter in and out of the proposed transit to see if the transit is real
 	cond1 = np.median(fcorr[intransit]) <= np.median(fcorr[outtransit]) - dispersion_sig*MAD1d(fcorr[outtransit])
