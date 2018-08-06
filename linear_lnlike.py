@@ -338,18 +338,17 @@ def identify_transit_candidates(sens, Ps, T0s, Ds, Zs, lnLs, Ndurations, Rs,
     params = params[np.unique(params[:,0], return_index=True)[1]]
 
     # do not consider too many planets to reduce FPs
-    params = trim_planets(params, lnLOIs_final[g])
+    params, lnLOIs = trim_planets(params, lnLOIs_final[g])
 
     # identify bona-fide transit-like events
     sens.params_guess_priorto_confirm = params
-    params, cond1, cond2 = confirm_transits(params, bjd, fcorr, ef, sens.Ms, sens.Rs, sens.Teff)
+    params, lnLOIs, cond1, cond2 = confirm_transits(params, lnLOIs, bjd, fcorr, ef, sens.Ms, sens.Rs, sens.Teff)
     sens.transit_condition_scatterin_gtr_scatterout = cond1
     sens.transit_condition_depth_gtr_rms = cond2
 
     # re-remove multiple transits based on refined parameters
-    lnLOIsin = lnLOIs_final[np.in1d(POIs_final, params[:,0])]
     p,t0,d,z,_ = remove_multiple_on_lnLs(bjd, params[:,0], params[:,1], 
-					 params[:,3], params[:,2], lnLOIsin)
+					 params[:,3], params[:,2], lnLOIs)
     params = np.array([p,t0,z,d]).T
 
     # try to identify EBs
@@ -435,14 +434,16 @@ def trim_planets(params, lnLOIs, Nplanetsmax=5):
     assert lnLOIs.size == Nplanets
     if Nplanets > Nplanetsmax:
 	tokeep = np.sort(np.argsort(lnLOIs)[::-1][:Nplanetsmax])  # retain the same ordering
-	return params[tokeep]
+	return params[tokeep], lnLOIs[tokeep]
     else:
-	return params
+	return params, lnLOIs
 
-def confirm_transits(params, bjd, fcorr, ef, Ms, Rs, Teff):
+
+def confirm_transits(params, lnLs, bjd, fcorr, ef, Ms, Rs, Teff):
     '''Look at proposed transits and confirm whether or not a significant 
     dimming is seen.'''
     Ntransits = params.shape[0]
+    assert lnLs.size == Ntransits
     paramsout, to_remove_inds = np.zeros((Ntransits,4)), np.zeros(0)
     transit_condition_scatterin_gtr_scatterout = np.zeros(Ntransits, dtype=bool)
     transit_condition_depth_gtr_rms = np.zeros(Ntransits, dtype=bool)
@@ -485,8 +486,9 @@ def confirm_transits(params, bjd, fcorr, ef, Ms, Rs, Teff):
 
     # remove false transits
     paramsout = np.delete(paramsout, to_remove_inds, 0)
+    lnLsout = np.delete(lnLs, to_remove_inds)
 
-    return paramsout, transit_condition_scatterin_gtr_scatterout, transit_condition_depth_gtr_rms
+    return paramsout, lnLsout, transit_condition_scatterin_gtr_scatterout, transit_condition_depth_gtr_rms
 
 
 def identify_EBs(params, bjd, fcorr, ef, Rs, SNRthresh=3., rpmax=30):
