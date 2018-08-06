@@ -221,6 +221,10 @@ def compute_transit_lnL(bjd, fcorr, ef, transit_times, durations, lnLs, depths, 
 def remove_multiple_on_lnLs(bjd, Ps, T0s, Ds, Zs, lnLs, dP=.1):
     '''remove multiple orbital periods but dont assume the shortest one is
     correct, instead select the one with the highest lnL.'''
+    assert Ps.size == T0s.size
+    assert Ps.size == Ds.size
+    assert Ps.size == Zs.size
+    assert Ps.size == lnLs.size
     to_remove = np.zeros(0)
     for i in range(Ps.size):
 	Ntransits = int((bjd.max()-bjd.min()) / Ps[i])
