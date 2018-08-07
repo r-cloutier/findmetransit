@@ -71,9 +71,9 @@ def plot_transit_search(self, SNRthresh=5, log=False):
     for i in range(Ndurations):
         ax = fig.add_subplot(Ndurations,1,i+1)
         yarr = np.log10(self.SNRs_linearsearch[:,i]) if log else self.SNRs_linearsearch[:,i]
-        ax.plot(self.transit_times, self.SNRs_linearsearch[:,i], 'k-')
+        ax.plot(self.transit_times, yarr, 'k-')
         ax.axhline(SNRthresh, ls='--', c='k', lw=.9)
-        ylabel = 'log$_{10}(Transit S/N)' if log else 'Transit S/N'
+        ylabel = 'log$_{10}$(Transit S/N)' if log else 'Transit S/N'
         ax.set_ylabel(ylabel), ax.set_xlim((self.bjd.min(), self.bjd.max()))
         ax.set_title('duration = %.1f hours'%(self.durations[i]*24),
                      fontsize=12)
@@ -92,6 +92,25 @@ def plot_transit_search(self, SNRthresh=5, log=False):
     fig.subplots_adjust(bottom=.1, left=.1, right=.96, top=.96, hspace=.3)
     plt.show()
     plt.close('all')
+
+
+def plot_phased_LC(self, P, T0, xlim=(.05,.05)):
+    '''consider any planet ephemeris, partiucularly those of FPs.'''
+    phase = foldAt(self.bjd, P, T0)
+    phase[phase>.5] -= 1
+    plt.figure(figsize=(12,4))
+    plt.subplot(121)
+    plt.errorbar(phase, self.fcorr, self.ef, fmt='k.', capsize=0,
+		 elinewidth=.9)
+    plt.xlabel('Phase [%.3f days]'%P), plt.xlim((-.5,.5))
+    plt.ylabel('Normalized flux')
+    plt.subplot(122)
+    plt.errorbar(phase, self.fcorr, self.ef, fmt='k.', capsize=0,
+                 elinewidth=.9)
+    plt.xlabel('Phase [%.3f days]'%P), plt.xlim((-.05,.05))
+    plt.show()
+    plt.close('all')
+
 
 
 def report_failed_planet_candidates(self):
