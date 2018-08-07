@@ -391,7 +391,7 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
     Rss, Mss, Teffs, Tmags = np.zeros(0), np.zeros(0), \
                              np.zeros(0), np.zeros(0)
     foldersdet = np.zeros(0)
-    PsFP, rpsFP = np.zeros(0), np.zeros(0)
+    PsFP, FsFP, rpsFP = np.zeros(0), np.zeros(0), np.zeros(0)
     RsFP, MsFP, TeffFP, TmagFP = np.zeros(0), np.zeros(0), \
                                  np.zeros(0), np.zeros(0)
     foldersFP = np.zeros(0)
@@ -421,6 +421,9 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
             for j in range(NFPs):
                 foldersFP = np.append(foldersFP, folders[i])
                 PsFP = np.append(PsFP, sens.paramsFP_guess[j,0])
+                FsFP = np.append(FsFP, _compute_insolation(sens.paramsFP_guess[j,0],
+                                                           sens.Ms, sens.Rs,
+                                                           sens.Teff))
                 rp = rvs.m2Rearth(rvs.Rsun2m(np.sqrt(sens.paramsFP_guess[j,2])*sens.Rs))
                 rpsFP = np.append(rpsFP, rp)
                 RsFP = np.append(RsFP, sens.Rs)
@@ -434,6 +437,7 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
     assert Ps.size == rps.size
     assert Ps.size == detected.size
     assert PsFP.size == rpsFP.size
+    assert PsFP.size == FsFP.size
     assert PsFP.size == MsFP.size
     sensgrid = Sensitivity_grid(prefix)
     sensgrid.foldersdet, sensgrid.Ps, sensgrid.rps, sensgrid.detected = foldersdet, Ps, \
@@ -443,7 +447,8 @@ def get_completeness_grid(prefix='TOIsensitivity351', pltt=True):
     sensgrid.foldersFP, sensgrid.PsFP, sensgrid.rpsFP = foldersFP, PsFP, rpsFP
     sensgrid.RsFP, sensgrid.MsFP, sensgrid.TeffFP, sensgrid.TmagFP = RsFP, MsFP, \
                                                                      TeffFP, TmagFP
-
+    sensgrid.FsFP = FsFP
+    
     # get sensitivity over P,rp and F,rp grids
     Pgrid = np.logspace(np.log10(.5),np.log10(27.4),12)
     rpgrid = np.logspace(np.log10(.5),np.log10(15),9)
