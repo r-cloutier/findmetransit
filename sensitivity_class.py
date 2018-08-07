@@ -111,10 +111,10 @@ class Sensitivity_grid:
     def plot_sensitivity(self, Pgrid=True, pltt=True, label=False):
  	if Pgrid:
 	    xarr, zarr = self.Pgrid, self.sensitivityP
-	    xlabel = 'Period [days]'
+	    xlabel, pnglabel = 'Period [days]', 'P'
 	else:
             xarr, zarr = self.Fgrid, self.sensitivityF
-	    xlabel = 'Insolation [S$_{\oplus}$]'
+	    xlabel, pnglabel = 'Insolation [S$_{\oplus}$]', 'F'
 
         fig = plt.figure(figsize=(5.5,4.7))
         ax = fig.add_subplot(111)
@@ -141,7 +141,7 @@ class Sensitivity_grid:
 		os.mkdir('plots')
 	    except OSError:
 		pass
-	    plt.savefig('plots/sensgrid_%s.png'%self.prefix)
+	    plt.savefig('plots/sensgrid%s_%s.png'%(pnglabel, self.prefix))
         if pltt:
             plt.show()
         plt.close('all')
@@ -150,10 +150,10 @@ class Sensitivity_grid:
     def plot_FP_correction(self, Pgrid=True, pltt=True, label=False):
         if Pgrid:
 	    xarr, xgrid = self.Ps, self.Pgrid
-	    xFP, xlabel = self.PsFP, 'Period [days]'
+	    xFP, xlabel, pnglabel = self.PsFP, 'Period [days]', 'P'
         else:
             xarr, xgrid = self.Fs, self.Fgrid
-	    xFP, xlabel = self.FsFP, 'Insolation [S$_{\oplus}$]'
+	    xFP, xlabel, pnglabel = self.FsFP, 'Insolation [S$_{\oplus}$]', 'F'
 
         # plot planet detections
         fig = plt.figure(figsize=(12,4))
@@ -214,7 +214,7 @@ class Sensitivity_grid:
 	        os.mkdir('plots')
 	    except OSError:
 	        pass
-            plt.savefig('plots/FPgrid_%s.png'%self.prefix)
+            plt.savefig('plots/FPgrid%s_%s.png'%(pnglabel, self.prefix))
         if pltt:
             plt.show()
         plt.close('all')
