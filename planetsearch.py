@@ -19,7 +19,8 @@ def read_data(fits_name):
 
 def is_star_of_interest(Ms, Rs, Teff, Tmag):
     logg = np.log10(6.67e-10*rvs.Msun2kg(Ms)*1e2 / rvs.Rsun2m(Rs)**2)
-    loggmin, Teffmax, Tmagmax = 3, 4e3, 12
+    #loggmin, Teffmax, Tmagmax = 3, 4e3, 11.43  # Tmag gives ~1e4 M dwarfs over the entire sky
+    loggmin, Teffmax, Tmagmax = 3, 4e3, 12.  # Tmag gives ~1e4 M dwarfs in one hemisphere
     print 'stellar params: ', logg, Teff, Tmag
     if (logg >= loggmin) & (Teff <= Teffmax) & (Tmag <= Tmagmax):
         return True
