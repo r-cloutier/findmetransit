@@ -123,10 +123,7 @@ def report_failed_planet_candidates(self):
         print 'is transit depth S/N greater than the required threshold?\n%s\n'%self.transit_condition_depth_gtr_rms[i] 
 
 
-def check_confirm_transits(self, dispersion_sig, depth_sig):
+def check_confirm_transits(self, dispersion_sig, depth_sig, bimodalfrac):
     '''Run confirm transits but with any arbitrary threshhold values.'''
-    paramsout, transit_condition_scatterin_gtr_scatterout, transit_condition_depth_gtr_rms = confirm_transits(self.params_guess_priorto_confirm, self.bjd,
-                                                                                                              self.fcorr, self.ef, self.Ms, self.Rs, self.Teff,
-                                                                                                              dispersion_sig, depth_sig)
-    return paramsout, transit_condition_scatterin_gtr_scatterout, \
-        transit_condition_depth_gtr_rms
+    paramsout, transit_condition_scatterin_gtr_scatterout, transit_condition_depth_gtr_rms, transit_condition_no_bimodal_flux_intransit = confirm_transits(self.params_guess_priorto_confirm, self.bjd, self.fcorr, self.ef, self.Ms, self.Rs, self.Teff, dispersion_sig, depth_sig, bimodalfrac)
+    return paramsout, transit_condition_scatterin_gtr_scatterout, transit_condition_depth_gtr_rms, transit_condition_no_bimodal_flux_intransit
