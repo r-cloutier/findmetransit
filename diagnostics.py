@@ -33,6 +33,7 @@ def plot_raw_LC(self):
     report_parameters(self)
     plt.errorbar(self.bjd, self.f, self.ef, fmt='k.', capsize=0,
                  elinewidth=.8)
+    plt.plot(self.bjd, self.mu, 'g-')
     plt.xlabel('BJD'), plt.ylabel('Normalized flux')
     plt.xlim((self.bjd.min(),self.bjd.max()))
     plt.title(planet_title(self), fontsize=12)
@@ -125,5 +126,6 @@ def report_failed_planet_candidates(self):
 
 def check_confirm_transits(self, dispersion_sig, depth_sig, bimodalfrac):
     '''Run confirm transits but with any arbitrary threshhold values.'''
-    paramsout, transit_condition_scatterin_gtr_scatterout, transit_condition_depth_gtr_rms, transit_condition_no_bimodal_flux_intransit = confirm_transits(self.params_guess_priorto_confirm, self.bjd, self.fcorr, self.ef, self.Ms, self.Rs, self.Teff, dispersion_sig, depth_sig, bimodalfrac)
+    lnLOIs = self.lnLOIs[np.in1d(self.POIs, self.params_guess_priorto_confirm[:,0])]
+    paramsout, transit_condition_scatterin_gtr_scatterout, transit_condition_depth_gtr_rms, transit_condition_no_bimodal_flux_intransit = confirm_transits(self.params_guess_priorto_confirm, lnLOIs, self.bjd, self.fcorr, self.ef, self.Ms, self.Rs, self.Teff, dispersion_sig, depth_sig, bimodalfrac)
     return paramsout, transit_condition_scatterin_gtr_scatterout, transit_condition_depth_gtr_rms, transit_condition_no_bimodal_flux_intransit
