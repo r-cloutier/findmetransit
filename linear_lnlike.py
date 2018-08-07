@@ -4,8 +4,8 @@ import vetting as vett
 import rvs, mcmc1, batman
 from scipy.interpolate import LinearNDInterpolator as lint
 
-global dispersion_sig, depth_sig
-dispersion_sig, depth_sig = 3., 3.
+global dispersion_sig, depth_sig, bimodalfrac
+dispersion_sig, depth_sig, bimodalfrac = 3., 3., .5
 
 def lnlike(bjd, f, ef, fmodel):
     return -.5*(np.sum((f-fmodel)**2 / ef**2 - np.log(1./ef**2)))
@@ -342,9 +342,10 @@ def identify_transit_candidates(sens, Ps, T0s, Ds, Zs, lnLs, Ndurations, Rs,
 
     # identify bona-fide transit-like events
     sens.params_guess_priorto_confirm = params
-    params, lnLOIs, cond1, cond2 = confirm_transits(params, lnLOIs, bjd, fcorr, ef, sens.Ms, sens.Rs, sens.Teff)
+    params, lnLOIs, cond1, cond2, cond3 = confirm_transits(params, lnLOIs, bjd, fcorr, ef, sens.Ms, sens.Rs, sens.Teff)
     sens.transit_condition_scatterin_gtr_scatterout = cond1
     sens.transit_condition_depth_gtr_rms = cond2
+    sens.transit_condition_no_bimodal_flux_intransit = cond3
 
     # re-remove multiple transits based on refined parameters
     p,t0,d,z,_ = remove_multiple_on_lnLs(bjd, params[:,0], params[:,1], 
@@ -447,6 +448,7 @@ def confirm_transits(params, lnLs, bjd, fcorr, ef, Ms, Rs, Teff):
     paramsout, to_remove_inds = np.zeros((Ntransits,4)), np.zeros(0)
     transit_condition_scatterin_gtr_scatterout = np.zeros(Ntransits, dtype=bool)
     transit_condition_depth_gtr_rms = np.zeros(Ntransits, dtype=bool)
+    transit_condition_no_bimodal_flux_intransit = np.zeros(Ntransits, dtype=bool)
     print 'Confirming proposed transits...'
     for i in range(Ntransits):
 	print float(i) / Ntransits
@@ -465,6 +467,7 @@ def confirm_transits(params, lnLs, bjd, fcorr, ef, Ms, Rs, Teff):
         phase[phase > .5] -= 1
 	Dfrac = .25   # fraction of the duration in-transit (should be <.5 to ignore ingress & egress)
         intransit = (phase*P >= -Dfrac*duration) & (phase*P <= Dfrac*duration)
+	intransitfull = (phase*P >= -duration/2) & (phase*P <= duration/2)
 	outtransit = (phase*P <= -(1.+Dfrac)*duration) | (phase*P >= (1.+Dfrac)*duration)
         #plt.plot(phase, fcorr, 'ko', phase[intransit], fcorr[intransit], 'bo'), plt.show()
 
@@ -475,11 +478,14 @@ def confirm_transits(params, lnLs, bjd, fcorr, ef, Ms, Rs, Teff):
 	depth = 1-np.median(fcorr[intransit])
 	sigdepth = np.median(ef[intransit])
 	cond2 = depth/sigdepth > depth_sig
-	print P, depth/sigdepth
-  	#cond2 = (1-np.median(fcorr[intransit]) <= depth+depth_sig*sigdepth) & \
-	#   	(1-np.median(fcorr[intransit]) >= depth-depth_sig*sigdepth)
 	transit_condition_depth_gtr_rms[i] = cond2
-	if cond1 and cond2:
+	# ensure that the flux measurements intransit are not bimodal (ie. at depth and at f=1 which would indicate a 
+	# bad period and hence a FP
+	intransit
+	y, x = np.histogram(fcorr[intransitfull], bins=30)
+	cond3 = float(y[x<x.mean()].sum())/y.sum() > bimodalfrac
+	transit_condition_no_bimodal_flux_intransit[i] = cond3
+	if cond1 and cond2 and cond3:
 	    pass
 	else:
 	    to_remove_inds = np.append(to_remove_inds, i)
@@ -488,7 +494,7 @@ def confirm_transits(params, lnLs, bjd, fcorr, ef, Ms, Rs, Teff):
     paramsout = np.delete(paramsout, to_remove_inds, 0)
     lnLsout = np.delete(lnLs, to_remove_inds)
 
-    return paramsout, lnLsout, transit_condition_scatterin_gtr_scatterout, transit_condition_depth_gtr_rms
+    return paramsout, lnLsout, transit_condition_scatterin_gtr_scatterout, transit_condition_depth_gtr_rms, transit_condition_no_bimodal_flux_intransit
 
 
 def identify_EBs(params, bjd, fcorr, ef, Rs, SNRthresh=3., rpmax=30):
