@@ -1,4 +1,5 @@
 from sensitivity_class import *
+from linear_lnlike_testconstants import confirm_transits
 
 global cols
 cols = ['b','g','r']
@@ -98,4 +99,15 @@ def report_failed_planet_candidates(self):
     transit criteria.'''
     Nplanet_guess = self.params_guess_priorto_confirm.shape[0]
     for i in range(Nplanet_guess):
-        
+        print 'Period = %.3f days'%self.params_guess_priorto_confirm[i,0]
+        print 'is median flux in-transit significantly deeper than out of transit?\n%s'%self.transit_condition_scatterin_gtr_scatterout[i] 
+        print 'is transit depth S/N greater than the required threshold?\n%s\n'%self.transit_condition_depth_gtr_rms[i] 
+
+
+def check_confirm_transits(self, dispersion_sig, depth_sig):
+    '''Run confirm transits but with any arbitrary threshhold values.'''
+    paramsout, transit_condition_scatterin_gtr_scatterout, transit_condition_depth_gtr_rms = confirm_transits(self.params_guess_priorto_confirm, self.bjd,
+                                                                                                              self.fcorr, self.ef, self.Ms, self.Rs, self.Teff,
+                                                                                                              dispersion_sig, depth_sig)
+    return paramsout, transit_condition_scatterin_gtr_scatterout, \
+        transit_condition_depth_gtr_rms
