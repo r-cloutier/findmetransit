@@ -373,7 +373,8 @@ def confirm_transits(params, lnLs, bjd, fcorr, ef, Ms, Rs, Teff, dispersion_sig,
         #plt.plot(phase, fcorr, 'ko', phase[intransit], fcorr[intransit], 'bo'), plt.show()
 
         # check scatter in and out of the proposed transit to see if the transit is real
-	cond1 = np.median(fcorr[intransit]) <= np.median(fcorr[outtransit]) - dispersion_sig*MAD1d(fcorr[outtransit])
+	#cond1 = np.median(fcorr[intransit]) <= np.median(fcorr[outtransit]) - dispersion_sig*MAD1d(fcorr[outtransit])
+	cond1 = (np.median(fcorr[outtransit]) - np.median(fcorr[intransit])) / MAD1d(fcorr[outtransit]) > dispersion_sig
 	transit_condition_scatterin_gtr_scatterout[i] = cond1
 	# also check that the transit depth is significant relative to the noise
 	depth = 1-np.median(fcorr[intransit])
@@ -382,7 +383,6 @@ def confirm_transits(params, lnLs, bjd, fcorr, ef, Ms, Rs, Teff, dispersion_sig,
 	transit_condition_depth_gtr_rms[i] = cond2
 	# ensure that the flux measurements intransit are not bimodal (ie. at depth and at f=1 which would indicate a 
 	# bad period and hence a FP
-	intransit
 	y, x = np.histogram(fcorr[intransitfull], bins=30)
         x = x[1:] - np.diff(x)[0]/2.
 	cond3 = float(y[x<x.mean()].sum())/y.sum() > bimodalfrac

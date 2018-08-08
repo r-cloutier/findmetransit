@@ -6,7 +6,7 @@ from scipy.interpolate import LinearNDInterpolator as lint
 
 global dispersion_sig, depth_sig, bimodalfrac
 #dispersion_sig, depth_sig, bimodalfrac = 3., 3., .5
-dispersion_sig, depth_sig, bimodalfrac = 3., 2.45, .5
+dispersion_sig, depth_sig, bimodalfrac = 2.3, 1.5, .5
 
 def lnlike(bjd, f, ef, fmodel):
     return -.5*(np.sum((f-fmodel)**2 / ef**2 - np.log(1./ef**2)))
@@ -345,11 +345,12 @@ def identify_transit_candidates(sens, Ps, T0s, Ds, Zs, lnLs, Ndurations, Rs,
     params, lnLOIs = trim_planets(params, lnLOIs_final[g])
 
     # identify bona-fide transit-like events
-    sens.params_guess_priorto_confirm = params
-    params, lnLOIs, cond1, cond2, cond3 = confirm_transits(params, lnLOIs, bjd, fcorr, ef, sens.Ms, sens.Rs, sens.Teff)
+    sens.params_guess_priorto_confirm, sens.lnLOIs_priorto_confirm = params, lnLOIs
+    params, lnLOIs, cond1, cond2, cond3, cond4 = confirm_transits(params, lnLOIs, bjd, fcorr, ef, sens.Ms, sens.Rs, sens.Teff)
     sens.transit_condition_scatterin_gtr_scatterout = cond1
     sens.transit_condition_depth_gtr_rms = cond2
     sens.transit_condition_no_bimodal_flux_intransit = cond3
+    sens.transit_condition_orbitalP_fits_in_WF = cond4
 
     # re-remove multiple transits based on refined parameters
     p,t0,d,z,_ = remove_multiple_on_lnLs(bjd, params[:,0], params[:,1], 
@@ -476,7 +477,8 @@ def confirm_transits(params, lnLs, bjd, fcorr, ef, Ms, Rs, Teff):
         #plt.plot(phase, fcorr, 'ko', phase[intransit], fcorr[intransit], 'bo'), plt.show()
 
         # check scatter in and out of the proposed transit to see if the transit is real
-	cond1 = np.median(fcorr[intransit]) <= np.median(fcorr[outtransit]) - dispersion_sig*MAD1d(fcorr[outtransit])
+	#cond1 = np.median(fcorr[intransit]) <= np.median(fcorr[outtransit]) - dispersion_sig*MAD1d(fcorr[outtransit])
+	cond1 = (np.median(fcorr[outtransit]) - np.median(fcorr[intransit])) / MAD1d(fcorr[outtransit]) > dispersion_sig
 	transit_condition_scatterin_gtr_scatterout[i] = cond1
 	# also check that the transit depth is significant relative to the noise
 	depth = 1-np.median(fcorr[intransit])
@@ -485,7 +487,6 @@ def confirm_transits(params, lnLs, bjd, fcorr, ef, Ms, Rs, Teff):
 	transit_condition_depth_gtr_rms[i] = cond2
 	# ensure that the flux measurements intransit are not bimodal (ie. at depth and at f=1 which would indicate a 
 	# bad period and hence a FP
-	intransit
 	y, x = np.histogram(fcorr[intransitfull], bins=30)
 	x = x[1:] - np.diff(x)[0]/2.
 	cond3 = float(y[x<x.mean()].sum())/y.sum() > bimodalfrac if y.sum() > 0 else False
