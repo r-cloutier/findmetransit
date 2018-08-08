@@ -139,7 +139,7 @@ def fit_GP_0(thetaGP, tbin, fbin, efbin):
     k1 = george.kernels.ExpSquaredKernel(l)
     k2 = george.kernels.ExpSine2Kernel(G,Pgp)
     gp = george.GP(a*(k1+k2))
-    bnds = ((-20,0),(-10,10),(-5,5),(-10,10))
+    bnds = ((-20,0),(-3,10),(-5,5),(-3,10))
     results = gp.optimize(tbin, fbin, efbin, **{'bounds':bnds})
     try:
         gp.compute(tbin, efbin)
@@ -226,6 +226,23 @@ def _optimize_GP(thetaGP, x, res, ey):
     return gp, results, mu, sig
 
 
+def _get_GP(thetaGP, x, res, ey):
+    '''Compute the GP model.'''
+    assert len(thetaGP) == 4
+    a, l, G, Pgp = np.exp(thetaGP)
+    k1 = george.kernels.ExpSquaredKernel(l)
+    k2 = george.kernels.ExpSine2Kernel(G,Pgp)
+    gp = george.GP(a*(k1+k2))
+    try:
+        gp.compute(x, ey)
+        mu, cov = gp.predict(res, x)
+        sig = np.sqrt(np.diag(cov))
+	results = thetaGP
+    except (ValueError, np.linalg.LinAlgError):
+        gp, results, mu, sig = None, np.zeros(len(thetaGP)), np.zeros(x.size), np.zeros(x.size)
+    return gp, results, mu, sig
+
+
 def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname,
                   Npntsmin=5e2, Npntsmax=1e3, medkernel=99, Nsig=3):
     '''Search for periodic transit-like events.'''
@@ -248,13 +265,13 @@ def find_transits(sens, bjd, f, ef, thetaGP, hdr, fname,
     tbin, fbin, efbin = boxcar(bjd[g], medfilt(f[g],medkernel), ef[g], dt=dt, include_edges=True, tfull=bjd)
     sens.tbin, sens.fbin, sens.efbin = tbin, fbin, efbin
     #_, mubin, sigbin = mcmc0.get_model0(thetaGP, tbin, fbin, efbin)
-    _, resultsGP, mubin, sigbin = _optimize_GP(thetaGP, tbin, fbin, efbin)
+    _, resultsGP, mubin, sigbin = _get_GP(thetaGP, tbin, fbin, efbin) 
     fintmu, fintsig = interp1d(tbin, mubin), interp1d(tbin, sigbin)
     mu, sig = fintmu(bjd), fintsig(bjd)
     fcorr = f - mu + 1 if mu.sum() > 0 else f - mu
     sens.bjd, sens.f, sens.ef = bjd, f, ef
     sens.mu, sens.sig, sens.fcorr = mu, sig, fcorr
-    sens.resultsGP_detrend = resultsGP
+    sens.resultsGP_detrend = thetaGP
 
     # do linear search first
     print 'Computing lnL over transit times and durations...\n'
