@@ -350,7 +350,7 @@ def identify_transit_candidates(sens, Ps, T0s, Ds, Zs, lnLs, Ndurations, Rs,
     sens.transit_condition_scatterin_gtr_scatterout = cond1
     sens.transit_condition_depth_gtr_rms = cond2
     sens.transit_condition_no_bimodal_flux_intransit = cond3
-    sens.transit_condition_orbitalP_fits_in_WF = cond4
+    sens.transit_condition_ephemeris_fits_in_WF = cond4
 
     # re-remove multiple transits based on refined parameters
     p,t0,d,z,_ = remove_multiple_on_lnLs(bjd, params[:,0], params[:,1], 
@@ -454,7 +454,7 @@ def confirm_transits(params, lnLs, bjd, fcorr, ef, Ms, Rs, Teff):
     transit_condition_scatterin_gtr_scatterout = np.zeros(Ntransits, dtype=bool)
     transit_condition_depth_gtr_rms = np.zeros(Ntransits, dtype=bool)
     transit_condition_no_bimodal_flux_intransit = np.zeros(Ntransits, dtype=bool)
-    transit_condition_orbitalP_fits_in_WF = np.zeros(Ntransits, dtype=bool)
+    transit_condition_ephemeris_fits_in_WF = np.zeros(Ntransits, dtype=bool)
     print 'Confirming proposed transits...'
     for i in range(Ntransits):
 	print float(i) / Ntransits
@@ -494,8 +494,8 @@ def confirm_transits(params, lnLs, bjd, fcorr, ef, Ms, Rs, Teff):
 	transit_condition_no_bimodal_flux_intransit[i] = cond3
         # ensure that at least two transits will fit within the observing window otherwise its just a
         # single transit-like event
-        cond4 = (T0-P >= bjd.min()) | (T0+P <= bjd.max())
-        transit_condition_orbitalP_fits_in_WF[i] = cond4
+        cond4 = ((T0-P >= bjd.min()) | (T0+P <= bjd.max())) & (T0 >= bjd.min()) & (T0 <= bjd.max())
+        transit_condition_ephemeris_fits_in_WF[i] = cond4
 	if cond1 and cond2 and cond3 and cond4:
 	    pass
 	else:
@@ -505,7 +505,7 @@ def confirm_transits(params, lnLs, bjd, fcorr, ef, Ms, Rs, Teff):
     paramsout = np.delete(paramsout, to_remove_inds, 0)
     lnLsout = np.delete(lnLs, to_remove_inds)
 
-    return paramsout, lnLsout, transit_condition_scatterin_gtr_scatterout, transit_condition_depth_gtr_rms, transit_condition_no_bimodal_flux_intransit, transit_condition_orbitalP_fits_in_WF
+    return paramsout, lnLsout, transit_condition_scatterin_gtr_scatterout, transit_condition_depth_gtr_rms, transit_condition_no_bimodal_flux_intransit, transit_condition_ephemeris_fits_in_WF
 
 
 def identify_EBs(params, bjd, fcorr, ef, Rs, SNRthresh=3., rpmax=30):
