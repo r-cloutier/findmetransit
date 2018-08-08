@@ -17,6 +17,20 @@ def read_data(fits_name):
     return bjd, f, ef, Ms, Rs, Teff, Tmag
 
 
+def _query_gaia(ra, dec):
+    '''Given the ra and dec of the TOI, query the GAIA DR2 to obtain the star's 
+    parallax which help to refine the stellar parameters when coupled with 2MASS 
+    photometry.'''
+    return parallax
+
+
+def _query_2MASS(ra, dec):
+    '''Given the ra and dec of a TOI, query the 2MASS catalog to obtain the star's
+    K-band magnitude which will be used to solve for the planet's mass using a 
+    mass-luminosity relation for M dwarfs.'''
+    return K
+
+
 def is_star_of_interest(Ms, Rs, Teff, Tmag):
     logg = np.log10(6.67e-10*rvs.Msun2kg(Ms)*1e2 / rvs.Rsun2m(Rs)**2)
     #loggmin, Teffmax, Tmagmax = 3, 4e3, 11.43  # Tmag gives ~1e4 M dwarfs over the entire sky
