@@ -127,5 +127,5 @@ def report_failed_planet_candidates(self):
 def check_confirm_transits(self, dispersion_sig, depth_sig, bimodalfrac):
     '''Run confirm transits but with any arbitrary threshhold values.'''
     lnLOIs = self.lnLOIs[np.in1d(self.POIs, self.params_guess_priorto_confirm[:,0])]
-    paramsout, lnLsout, transit_condition_scatterin_gtr_scatterout, transit_condition_depth_gtr_rms, transit_condition_no_bimodal_flux_intransit = confirm_transits(self.params_guess_priorto_confirm, lnLOIs, self.bjd, self.fcorr, self.ef, self.Ms, self.Rs, self.Teff, dispersion_sig, depth_sig, bimodalfrac)
-    return self.params_guess_priorto_confirm, paramsout, lnLsout, transit_condition_scatterin_gtr_scatterout, transit_condition_depth_gtr_rms, transit_condition_no_bimodal_flux_intransit
+    paramsout, lnLsout, transit_condition_scatterin_gtr_scatterout, transit_condition_depth_gtr_rms, transit_condition_no_bimodal_flux_intransit, transit_condition_orbitalP_fits_in_WF = confirm_transits(self.params_guess_priorto_confirm, lnLOIs, self.bjd, self.fcorr, self.ef, self.Ms, self.Rs, self.Teff, dispersion_sig, depth_sig, bimodalfrac)
+    return self.params_guess_priorto_confirm, paramsout, lnLsout, transit_condition_scatterin_gtr_scatterout, transit_condition_depth_gtr_rms, transit_condition_no_bimodal_flux_intransit, transit_condition_orbitalP_fits_in_WF
