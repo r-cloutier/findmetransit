@@ -488,7 +488,7 @@ def confirm_transits(params, lnLs, bjd, fcorr, ef, Ms, Rs, Teff):
 	intransit
 	y, x = np.histogram(fcorr[intransitfull], bins=30)
 	x = x[1:] - np.diff(x)[0]/2.
-	cond3 = float(y[x<x.mean()].sum())/y.sum() > bimodalfrac
+	cond3 = float(y[x<x.mean()].sum())/y.sum() > bimodalfrac if y.sum() > 0 else False
 	transit_condition_no_bimodal_flux_intransit[i] = cond3
 	if cond1 and cond2 and cond3:
 	    pass
