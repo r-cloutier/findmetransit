@@ -194,7 +194,7 @@ class Sensitivity_grid:
         ax5.set_xlabel(xlabel, fontsize=12)
         
         ax6 = fig.add_subplot(236)
-        transitprob = get_median_transitprob(self, Pgrid=Pgrid)
+        transitprob = _get_median_transitprob(self, Pgrid=Pgrid)
         cax6 = ax6.pcolormesh(xgrid, self.rpgrid, (xsens*transitprob).T,
                               cmap=truncate_colormap(plt.get_cmap('rainbow'),0,1),
                               vmin=0)
