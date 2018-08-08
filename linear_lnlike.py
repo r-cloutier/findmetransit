@@ -220,7 +220,7 @@ def compute_transit_lnL(bjd, fcorr, ef, transit_times, durations, lnLs, depths, 
     return Ps, T0s, Ds, Zs, lnLs_transit
 
 
-def remove_multiple_on_lnLs(bjd, Ps, T0s, Ds, Zs, lnLs, rP=.02):
+def remove_multiple_on_lnLs(bjd, Ps, T0s, Ds, Zs, lnLs, rP=.02, rZ=.1):
     '''remove multiple orbital periods but dont assume the shortest one is
     correct, instead select the one with the highest lnL.'''
     assert Ps.size == T0s.size
@@ -237,13 +237,15 @@ def remove_multiple_on_lnLs(bjd, Ps, T0s, Ds, Zs, lnLs, rP=.02):
 	    #isclose = np.isclose(Ps, Ps[i]*j, atol=dP*2)
 	    isclose = np.isclose(Ps, Ps[i]*j, rtol=rP)
 	    if np.any(isclose):
-		iscloselnL = lnLs[isclose] <= lnLs[i]
+		# remove if nearby period has a lower lnL and has the same depth within rZ (i.e. rZ=10%)
+		iscloselnL = (lnLs[isclose] <= lnLs[i]) & (Zs[isclose]/Zs[i] < 1+rZ) & (Zs[isclose]/Zs[i] > 1-rZ)
 		to_remove = np.append(to_remove, Ps[isclose][iscloselnL])
 	    # check inverse multiples
 	    #isclose = np.isclose(Ps, Ps[i]/float(j), atol=dP*2)
 	    isclose = np.isclose(Ps, Ps[i]/float(j), rtol=rP)
 	    if np.any(isclose):
-		iscloselnL = lnLs[isclose] <= lnLs[i]
+                # remove if nearby period has a lower lnL and has the same depth within rZ (i.e. rZ=10%)
+                iscloselnL = (lnLs[isclose] <= lnLs[i]) & (Zs[isclose]/Zs[i] < 1+rZ) & (Zs[isclose]/Zs[i] > 1-rZ)
 		to_remove = np.append(to_remove, Ps[isclose][iscloselnL])
     to_remove = np.unique(to_remove)
     assert to_remove.size <= Ps.size

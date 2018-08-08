@@ -58,7 +58,7 @@ def get_timeseries(mag, Teff, Rs, Ms, Ps, rpRss, add_systematic=True,
     fcorr = fmodel + np.random.randn(bjd.size) * rms
 
     # add eclipsing binaries (sometimes)
-    ebmodel, EBparams = get_EB_model(bjd, Rs, Mdwarf_binary_frac=0)
+    ebmodel, EBparams = get_EB_model(bjd, Rs)
     fcorr += ebmodel
 
     # add trends if desired
