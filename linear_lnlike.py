@@ -353,7 +353,7 @@ def identify_transit_candidates(sens, Ps, T0s, Ds, Zs, lnLs, Ndurations, Rs,
     # remove duplicates
     params = params[np.unique(params[:,0], return_index=True)[1]]
 
-    # do not consider too many planets to reduce FPs
+    # do not consider too many planets to limit FPs
     params, lnLOIs = trim_planets(params, lnLOIs_final[g])
 
     # identify bona-fide transit-like events
