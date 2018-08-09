@@ -24,10 +24,10 @@ def rescale_rms(mag, rmsfloor=6e-5):
     #assert _powerlawfunc(Tmags[g], *popt).min() >= rmsfloor
     popt = np.array([1.77126381e-12, 8.07867123e+00]) # skip the above steps to some save time
     # return fit value at the input TESS magnitude
-    return _powerlawfunc(mag, *popt)
+    return powerlawfunc(mag, *popt)
 
 
-def _powerlawfunc(xarr, A, alpha, rmsfloor=6e-5):
+def powerlawfunc(xarr, A, alpha, rmsfloor=6e-5):
     return A*xarr**alpha + rmsfloor
 
 
