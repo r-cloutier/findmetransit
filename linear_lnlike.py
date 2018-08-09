@@ -332,7 +332,7 @@ def identify_transit_candidates(sens, Ps, T0s, Ds, Zs, lnLs, Ndurations, Rs,
                                                           ZOIs_red[unique], \
                                                           lnLOIs_red[unique]
 
-    # update parameters (especially Z for removing planet multiples)
+    # update Z manually
     ZOIs_red2 = np.zeros(POIs_red.size)
     for i in range(ZOIs_red2.size):
 	phase = foldAt(bjd, POIs_red[i], T0OIs_red[i])
@@ -340,7 +340,6 @@ def identify_transit_candidates(sens, Ps, T0s, Ds, Zs, lnLs, Ndurations, Rs,
 	dur = .25*DOIs_red[i]/POIs_red[i]
 	g = (phase >= -dur) & (phase <= dur)
 	ZOIs_red2[i] = np.median(fcorr[g])
-	plt.plot(phase, fcorr, '.', phase[g], fcorr[g], '.'), plt.axhline(ZOIs_red2[i]), plt.show()
 
     # remove multiple transits (i.e. 2P, 3P, 4P...)
     POIs_final, T0OIs_final, DOIs_final, ZOIs_final, lnLOIs_final = \
