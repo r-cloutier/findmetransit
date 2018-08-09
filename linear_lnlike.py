@@ -6,7 +6,7 @@ from scipy.interpolate import LinearNDInterpolator as lint
 
 global dispersion_sig, depth_sig, bimodalfrac
 #dispersion_sig, depth_sig, bimodalfrac = 3., 3., .5
-#dispersion_sig, depth_sig, bimodalfrac = 2., 1.35, .5
+#dispersion_sig, depth_sig, bimodalfrac = 2., 1.35, .5  # v3
 dispersion_sig, depth_sig, bimodalfrac = 1.6, 1., .5
 
 def lnlike(bjd, f, ef, fmodel):
@@ -349,7 +349,9 @@ def identify_transit_candidates(sens, Ps, T0s, Ds, Zs, lnLs, Ndurations, Rs,
 
     # identify bona-fide transit-like events
     sens.params_guess_priorto_confirm, sens.lnLOIs_priorto_confirm = params, lnLOIs
-    params, lnLOIs, cond1, cond2, cond3, cond4 = confirm_transits(params, lnLOIs, bjd, fcorr, ef, sens.Ms, sens.Rs, sens.Teff)
+    sens.dispersion_sig, sens.depth_sig, sens.bimodalfrac = dispersion_sig, depth_sig, bimodalfrac
+    params, lnLOIs, cond1, cond2, cond3, cond4 = confirm_transits(params, lnLOIs, bjd, fcorr, ef, 
+								  sens.Ms, sens.Rs, sens.Teff)
     sens.transit_condition_scatterin_gtr_scatterout = cond1
     sens.transit_condition_depth_gtr_rms = cond2
     sens.transit_condition_no_bimodal_flux_intransit = cond3
