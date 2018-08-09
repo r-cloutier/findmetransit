@@ -215,27 +215,32 @@ def compute_transit_lnL(bjd, fcorr, ef, transit_times, durations, lnLs, depths, 
     return Ps, T0s, Ds, Zs, lnLs_transit
 
 
-def remove_multiple_on_lnLs(bjd, Ps, T0s, Ds, Zs, lnLs, dP=.1):
+def remove_multiple_on_lnLs(bjd, ef, Ps, T0s, Ds, Zs, lnLs, rP=.02, SNRZ=1):
     '''remove multiple orbital periods but dont assume the shortest one is
     correct, instead select the one with the highest lnL.'''
     assert Ps.size == T0s.size
     assert Ps.size == Ds.size
     assert Ps.size == Zs.size
     assert Ps.size == lnLs.size
+    ##dP = .1
     to_remove = np.zeros(0)
     for i in range(Ps.size):
 	Ntransits = int((bjd.max()-bjd.min()) / Ps[i])
 	lim = Ntransits+1 if Ntransits+1 > 2 else 3
 	for j in range(2,lim):
 	    # check positive multiples
-	    isclose = np.isclose(Ps, Ps[i]*j, atol=dP*2)
+	    #isclose = np.isclose(Ps, Ps[i]*j, atol=dP*2)
+	    isclose = np.isclose(Ps, Ps[i]*j, rtol=rP)
 	    if np.any(isclose):
-		iscloselnL = lnLs[isclose] <= lnLs[i]
+		# remove if nearby period has a lower lnL and has the same depth within rZ (i.e. rZ=10%)
+		iscloselnL = (lnLs[isclose] <= lnLs[i]) & (abs(Zs[isclose]-Zs[i])/ef[0] < SNRZ)
 		to_remove = np.append(to_remove, Ps[isclose][iscloselnL])
 	    # check inverse multiples
-	    isclose = np.isclose(Ps, Ps[i]/float(j), atol=dP*2)
+	    #isclose = np.isclose(Ps, Ps[i]/float(j), atol=dP*2)
+	    isclose = np.isclose(Ps, Ps[i]/float(j), rtol=rP)
 	    if np.any(isclose):
-		iscloselnL = lnLs[isclose] <= lnLs[i]
+                # remove if nearby period has a lower lnL and has the same depth within rZ (i.e. rZ=10%)
+                iscloselnL = (lnLs[isclose] <= lnLs[i]) & (abs(Zs[isclose]-Zs[i])/ef[0] < SNRZ)
 		to_remove = np.append(to_remove, Ps[isclose][iscloselnL])
     to_remove = np.unique(to_remove)
     assert to_remove.size <= Ps.size
@@ -248,7 +253,7 @@ def remove_multiple_on_lnLs(bjd, Ps, T0s, Ds, Zs, lnLs, dP=.1):
     return Ps_final, T0s_final, Ds_final, Zs_final, lnLs_final
 
 
-def remove_multiples(bjd, Ps, T0s, Ds, Zs, lnLs, dP=.1):
+def remove_multiples_OBSOLETE(bjd, Ps, T0s, Ds, Zs, lnLs, dP=.1):
     assert Ps.size == T0s.size
     assert Ps.size == Ds.size
     assert Ps.size == Zs.size
@@ -271,6 +276,115 @@ def remove_multiples(bjd, Ps, T0s, Ds, Zs, lnLs, dP=.1):
     lnLs_final = np.delete(lnLs, to_remove_inds)
     return Ps_final, T0s_final, Ds_final, Zs_final, lnLs_final
 
+
+def identify_transit_candidates(sens, Ps, T0s, Ds, Zs, lnLs, Ndurations, Rs,
+                                bjd, fcorr, ef):
+    '''Given the transit parameters and their lnLs, identify transit 
+    candidates.'''
+    assert Ps.size == T0s.size
+    assert Ps.size == Ds.size
+    assert Ps.size == Zs.size
+    assert Ps.size == lnLs.size
+
+    # remove negative entries (mostly negative depths)
+    g = (Ps>0) & (T0s>0) & (Ds>0) & (Zs>0)
+    Ps, T0s, Ds, Zs, lnLs = Ps[g], T0s[g], Ds[g], Zs[g], lnLs[g]
+
+    # get optimized parameters to get more precise Ps and T0s which will help 
+    # when removing multiples
+    Ps2, T0s2, Ds2, Zs2 = np.zeros_like(Ps), np.zeros_like(Ps), \
+		      	  np.zeros_like(Ps), np.zeros_like(Ps)
+    lnLs2 = np.zeros_like(Ps)
+    for i in range(Ps.size):
+	params = np.array([Ps[i], T0s[i], Zs[i], Ds[i]])
+        Ps2[i], T0s2[i], Zs2[i], Ds2[i], fmodel = _fit_params(params, bjd, fcorr, ef, 
+						              sens.Ms, sens.Rs, sens.Teff)
+	lnLs2[i] = lnlike(bjd, fcorr, ef, fmodel)
+
+    # remove common periods based on maximum likelihood 
+    dP = .1
+    sort = np.argsort(Ps2)
+    POIs, T0OIs, DOIs, ZOIs, lnLOIs = Ps2[sort], T0s2[sort], Ds2[sort], Zs2[sort], \
+                                      lnLs2[sort]
+    POIs_red, T0OIs_red, DOIs_red, ZOIs_red, lnLOIs_red = np.zeros(0), \
+                                                          np.zeros(0), \
+							  np.zeros(0), \
+                                                          np.zeros(0), \
+							  np.zeros(0)
+    for i in range(POIs.size):
+        isclose = np.isclose(POIs, POIs[i], atol=dP*2)
+        if np.any(isclose):
+            g = lnLOIs == lnLOIs[isclose].max()
+            POIs_red = np.append(POIs_red, POIs[g])
+            T0OIs_red = np.append(T0OIs_red, T0OIs[g])
+            DOIs_red = np.append(DOIs_red, DOIs[g])
+            ZOIs_red = np.append(ZOIs_red, ZOIs[g])
+            lnLOIs_red = np.append(lnLOIs_red, lnLOIs[g])
+    _,unique = np.unique(POIs_red, return_index=True)
+    POIs_red, T0OIs_red, DOIs_red, ZOIs_red, lnLOIs_red = POIs_red[unique], \
+							  T0OIs_red[unique], \
+                                                          DOIs_red[unique], \
+                                                          ZOIs_red[unique], \
+                                                          lnLOIs_red[unique]
+
+    # update parameters (especially Z for removing planet multiples)
+    ZOIs_red2 = np.zeros(POIs_red.size)
+    for i in range(ZOIs_red2.size):
+	phase = foldAt(bjd, POIs_red[i], T0OIs_red[i])
+	phase[phase > .5] -= 1
+	dur = .25*DOIs_red[i]/POIs_red[i]
+	g = (phase >= -dur) & (phase <= dur)
+	ZOIs_red2[i] = np.median(fcorr[g])
+	plt.plot(phase, fcorr, '.', phase[g], fcorr[g], '.'), plt.axhline(ZOIs_red2[i]), plt.show()
+
+    # remove multiple transits (i.e. 2P, 3P, 4P...)
+    POIs_final, T0OIs_final, DOIs_final, ZOIs_final, lnLOIs_final = \
+  	remove_multiple_on_lnLs(bjd, ef, POIs_red, T0OIs_red, DOIs_red, ZOIs_red2,
+			 	lnLOIs_red)
+
+    # get initial parameter guess for identified transits
+    g = ZOIs_final > 0
+    params = np.array([POIs_final, T0OIs_final, ZOIs_final, DOIs_final]).T[g]
+
+    # remove duplicates
+    params = params[np.unique(params[:,0], return_index=True)[1]]
+
+    # do not consider too many planets to reduce FPs
+    params, lnLOIs = trim_planets(params, lnLOIs_final[g])
+
+    # identify bona-fide transit-like events
+    sens.params_guess_priorto_confirm, sens.lnLOIs_priorto_confirm = params, lnLOIs
+    sens.dispersion_sig, sens.depth_sig, sens.bimodalfrac = dispersion_sig, depth_sig, bimodalfrac
+    params, lnLOIs, cond1, cond2, cond3, cond4 = confirm_transits(params, lnLOIs, bjd, fcorr, ef, 
+								  sens.Ms, sens.Rs, sens.Teff)
+    sens.transit_condition_scatterin_gtr_scatterout = cond1
+    sens.transit_condition_depth_gtr_rms = cond2
+    sens.transit_condition_no_bimodal_flux_intransit = cond3
+    sens.transit_condition_ephemeris_fits_in_WF = cond4
+
+    # re-remove multiple transits based on refined parameters
+    p,t0,d,z,_ = remove_multiple_on_lnLs(bjd, ef, params[:,0], params[:,1], 
+					 params[:,3], params[:,2], lnLOIs)
+    params = np.array([p,t0,z,d]).T
+
+    # try to identify EBs
+    #params, EBparams = identify_EBs(params, bjd, fcorr, ef, Rs)
+    params, EBparams, maybeEBparams, EBconditions, EBcondition_labels = \
+                                    vett.identify_EBs(params, bjd, fcorr, ef,
+                                                      sens.Ms, sens.Rs, 
+						      sens.Teff)
+    sens.EBconditions, sens.EBcondition_labels = EBconditions, \
+                                                 EBcondition_labels
+    
+    return POIs_final, T0OIs_final, DOIs_final, ZOIs_final, lnLOIs_final, \
+        params, EBparams, maybeEBparams
+
+
+#def _optimize_box_transit(theta, bjd, fcorr, ef):
+#    assert len(theta) == 4
+#    #P, T0, depth, duration = theta
+#    popt,_ = curve_fit(box_transit_model_curve_fit, bjd, fcorr, p0=theta, sigma=ef, absolute_sigma=True)
+#    return popt
 
 def _get_LDcoeffs(Ms, Rs, Teff, Z=0):
     '''Interpolate Claret 2017 grid of limb darkening coefficients to a
@@ -385,8 +499,8 @@ def confirm_transits(params, lnLs, bjd, fcorr, ef, Ms, Rs, Teff, dispersion_sig,
 	# ensure that the flux measurements intransit are not bimodal (ie. at depth and at f=1 which would indicate a 
 	# bad period and hence a FP
 	y, x = np.histogram(fcorr[intransitfull], bins=30)
-        x = x[1:] - np.diff(x)[0]/2.
-	cond3 = float(y[x<x.mean()].sum())/y.sum() > bimodalfrac
+	x = x[1:] - np.diff(x)[0]/2.
+	cond3 = float(y[x<x.mean()].sum())/y.sum() > bimodalfrac if y.sum() > 0 else False
 	transit_condition_no_bimodal_flux_intransit[i] = cond3
         # ensure that at least two transits will fit within the observing window otherwise its just a
         # single transit-like event

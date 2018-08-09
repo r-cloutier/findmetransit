@@ -220,7 +220,7 @@ def compute_transit_lnL(bjd, fcorr, ef, transit_times, durations, lnLs, depths, 
     return Ps, T0s, Ds, Zs, lnLs_transit
 
 
-def remove_multiple_on_lnLs(bjd, Ps, T0s, Ds, Zs, lnLs, rP=.02, rZ=.1):
+def remove_multiple_on_lnLs(bjd, ef, Ps, T0s, Ds, Zs, lnLs, rP=.02, SNRZ=1):
     '''remove multiple orbital periods but dont assume the shortest one is
     correct, instead select the one with the highest lnL.'''
     assert Ps.size == T0s.size
@@ -238,14 +238,14 @@ def remove_multiple_on_lnLs(bjd, Ps, T0s, Ds, Zs, lnLs, rP=.02, rZ=.1):
 	    isclose = np.isclose(Ps, Ps[i]*j, rtol=rP)
 	    if np.any(isclose):
 		# remove if nearby period has a lower lnL and has the same depth within rZ (i.e. rZ=10%)
-		iscloselnL = (lnLs[isclose] <= lnLs[i]) & (Zs[isclose]/Zs[i] < 1+rZ) & (Zs[isclose]/Zs[i] > 1-rZ)
+		iscloselnL = (lnLs[isclose] <= lnLs[i]) & (abs(Zs[isclose]-Zs[i])/ef[0] < SNRZ)
 		to_remove = np.append(to_remove, Ps[isclose][iscloselnL])
 	    # check inverse multiples
 	    #isclose = np.isclose(Ps, Ps[i]/float(j), atol=dP*2)
 	    isclose = np.isclose(Ps, Ps[i]/float(j), rtol=rP)
 	    if np.any(isclose):
                 # remove if nearby period has a lower lnL and has the same depth within rZ (i.e. rZ=10%)
-                iscloselnL = (lnLs[isclose] <= lnLs[i]) & (Zs[isclose]/Zs[i] < 1+rZ) & (Zs[isclose]/Zs[i] > 1-rZ)
+                iscloselnL = (lnLs[isclose] <= lnLs[i]) & (abs(Zs[isclose]-Zs[i])/ef[0] < SNRZ)
 		to_remove = np.append(to_remove, Ps[isclose][iscloselnL])
     to_remove = np.unique(to_remove)
     assert to_remove.size <= Ps.size
@@ -332,9 +332,19 @@ def identify_transit_candidates(sens, Ps, T0s, Ds, Zs, lnLs, Ndurations, Rs,
                                                           ZOIs_red[unique], \
                                                           lnLOIs_red[unique]
 
+    # update parameters (especially Z for removing planet multiples)
+    ZOIs_red2 = np.zeros(POIs_red.size)
+    for i in range(ZOIs_red2.size):
+	phase = foldAt(bjd, POIs_red[i], T0OIs_red[i])
+	phase[phase > .5] -= 1
+	dur = .25*DOIs_red[i]/POIs_red[i]
+	g = (phase >= -dur) & (phase <= dur)
+	ZOIs_red2[i] = np.median(fcorr[g])
+	plt.plot(phase, fcorr, '.', phase[g], fcorr[g], '.'), plt.axhline(ZOIs_red2[i]), plt.show()
+
     # remove multiple transits (i.e. 2P, 3P, 4P...)
     POIs_final, T0OIs_final, DOIs_final, ZOIs_final, lnLOIs_final = \
-  	remove_multiple_on_lnLs(bjd, POIs_red, T0OIs_red, DOIs_red, ZOIs_red,
+  	remove_multiple_on_lnLs(bjd, ef, POIs_red, T0OIs_red, DOIs_red, ZOIs_red2,
 			 	lnLOIs_red)
 
     # get initial parameter guess for identified transits
@@ -358,7 +368,7 @@ def identify_transit_candidates(sens, Ps, T0s, Ds, Zs, lnLs, Ndurations, Rs,
     sens.transit_condition_ephemeris_fits_in_WF = cond4
 
     # re-remove multiple transits based on refined parameters
-    p,t0,d,z,_ = remove_multiple_on_lnLs(bjd, params[:,0], params[:,1], 
+    p,t0,d,z,_ = remove_multiple_on_lnLs(bjd, ef, params[:,0], params[:,1], 
 					 params[:,3], params[:,2], lnLOIs)
     params = np.array([p,t0,z,d]).T
 
