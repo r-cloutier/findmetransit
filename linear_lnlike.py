@@ -359,6 +359,7 @@ def identify_transit_candidates(sens, Ps, T0s, Ds, Zs, lnLs, Ndurations, Rs,
     # identify bona-fide transit-like events
     sens.params_guess_priorto_confirm, sens.lnLOIs_priorto_confirm = params, lnLOIs
     sens.dispersion_sig, sens.depth_sig, sens.bimodalfrac = dispersion_sig, depth_sig, bimodalfrac
+    sens.pickleobject()
     params, lnLOIs, cond1, cond2, cond3, cond4 = confirm_transits(params, lnLOIs, bjd, fcorr, ef, 
 								  sens.Ms, sens.Rs, sens.Teff)
     sens.transit_condition_scatterin_gtr_scatterout = cond1
