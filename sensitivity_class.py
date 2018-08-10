@@ -112,21 +112,20 @@ class Sensitivity_grid:
         '''Plot the various grids of interest including the number of planet 
         detections, FPs, sensitivity etc.'''
         if Pgrid:
-	    xarr, xgrid, xsens = self.Ps, self.Pgrid, self.sensitivityP
+	    xarr, xgrid, xsens, zdet = self.Ps, self.Pgrid, self.sensitivityP, self.NdetP
 	    xFP, xlabel, pnglabel = self.PsFP, 'Period [days]', 'P'
             vert1, vert2 = self.Pgrid.max()/2, self.Pgrid.max()/3
             xlim = self.Pgrid.min(), self.Pgrid.max()
         else:
-            xarr, xgrid, xsens = self.Fs, self.Fgrid, self.sensitivityF
+            xarr, xgrid, xsens, zdet = self.Fs, self.Fgrid, self.sensitivityF, self.NdetF
 	    xFP, xlabel, pnglabel = self.FsFP, 'Insolation [S$_{\oplus}$]', 'F'
             vert1, vert2 = .9, .22
             xlim = self.Fgrid.max(), self.Fgrid.min()
-        
+
         fig = plt.figure(figsize=(12,9))
         ax1 = fig.add_subplot(231)
-        N_det, x, y = np.histogram2d(xarr[self.detected==1], self.rps[self.detected==1],
-                                     bins=(xgrid, self.rpgrid))
-        cax1 = ax1.pcolormesh(x, y, N_det.T, cmap=truncate_colormap(plt.get_cmap('rainbow'),0,1))
+        cax1 = ax1.pcolormesh(xgrid, self.rpgrid, zdet.T, 
+			      cmap=truncate_colormap(plt.get_cmap('rainbow'),0,1))
         cbar_axes1 = fig.add_axes([.06,.96,.27,.03])
         cbar1 = fig.colorbar(cax1, cax=cbar_axes1, orientation='horizontal')
         cbar1.ax.tick_params(labelsize=9)
@@ -138,8 +137,9 @@ class Sensitivity_grid:
         ax1.set_ylabel('r$_p$ [R$_{\oplus}$]', fontsize=12)
         
         ax2 = fig.add_subplot(232)
-        N_FP, x, y = np.histogram2d(xFP, self.rpsFP, bins=(xgrid, self.rpgrid))
-        cax2 = ax2.pcolormesh(x, y, N_FP.T, cmap=truncate_colormap(plt.get_cmap('rainbow'),0,1))
+        N_FP,_,_ = np.histogram2d(xFP, self.rpsFP, bins=(xgrid, self.rpgrid))
+        cax2 = ax2.pcolormesh(xgrid, self.rpgrid, N_FP.T,
+ 			      cmap=truncate_colormap(plt.get_cmap('rainbow'),0,1))
         cbar_axes2 = fig.add_axes([.38,.96,.27,.03])
         cbar2 = fig.colorbar(cax2, cax=cbar_axes2, orientation='horizontal')
         cbar2.ax.tick_params(labelsize=9)
@@ -150,8 +150,8 @@ class Sensitivity_grid:
         ax2.set_xscale('log'), ax2.set_yscale('log')
         
         ax3 = fig.add_subplot(233)
-        yield_correction = 1 - N_FP / (N_det + N_FP)
-        yield_correction[N_det+N_FP==0] = 1.
+        yield_correction = 1 - N_FP / (zdet + N_FP)
+        yield_correction[zdet+N_FP==0] = 1.
         cax3 = ax3.pcolormesh(xgrid, self.rpgrid, yield_correction.T,
                               cmap=truncate_colormap(plt.get_cmap('rainbow'),0,1))
         cbar_axes3 = fig.add_axes([.69,.96,.27,.03])
@@ -164,9 +164,7 @@ class Sensitivity_grid:
         ax3.set_xscale('log'), ax3.set_yscale('log')
         
         ax4 = fig.add_subplot(234)
-        N_det, x, y = np.histogram2d(xarr[self.detected==1], self.rps[self.detected==1],
-                                     bins=(xgrid, self.rpgrid))
-        cax4 = ax4.pcolormesh(x, y, (N_det*yield_correction).T,
+        cax4 = ax4.pcolormesh(xgrid, self.rpgrid, (zdet*yield_correction).T,
                               cmap=truncate_colormap(plt.get_cmap('rainbow'),0,1))
         cbar_axes4 = fig.add_axes([.06,.1,.27,.03])
         cbar4 = fig.colorbar(cax4, cax=cbar_axes4, orientation='horizontal')
@@ -207,6 +205,11 @@ class Sensitivity_grid:
         ax6.set_xlim(xlim), ax6.set_ylim((self.rpgrid.min(),self.rpgrid.max()))
         ax6.set_xscale('log'), ax6.set_yscale('log')
         ax6.set_xlabel(xlabel, fontsize=12)
+
+	if Pgrid:
+	    self.NFPP, self.FP_correctionP, self.median_transitprobP = N_FP, yield_correction, transitprob
+	else:
+	    self.NFPF, self.FP_correctionF, self.median_transitprobF = N_FP, yield_correction, transitprob
 
         fig.subplots_adjust(bottom=.22, left=.06, right=.96, top=.9, hspace=.2, wspace=.18)
         if label:
